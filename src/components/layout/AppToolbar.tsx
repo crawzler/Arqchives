@@ -70,15 +70,15 @@ export default function AppToolbar() {
   }, [toggleSidebar, togglePlaylist, setShowConfig, setIsPlaying])
 
   return (
-    <div className="h-7 bg-neutral-950/80 border-b border-neutral-800/50 flex items-center justify-between px-3 select-none relative z-50" style={{ marginRight: 0 }}>
+    <div className="h-7 bg-glass border-b border-subtle/50 flex items-center justify-between px-md select-none relative z-fixed" style={{ marginRight: 0 }}>
       {/* Left: Panel toggles + Temp folder + Settings */}
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-xs">
         <button
           onClick={toggleSidebar}
           className={cn(
-            'h-5 w-5 rounded flex items-center justify-center transition-all',
-            'text-neutral-500 hover:text-white hover:bg-white/5',
-            sidebarCollapsed && 'text-white/70 bg-white/10'
+            'h-5 w-5 radius-md flex items-center justify-center trans-all',
+            'text-muted hover:text-primary hover:bg-hover',
+            sidebarCollapsed && 'text-primary/70 bg-primary/10'
           )}
           title={sidebarCollapsed ? 'Mostrar pastas (Alt+1)' : 'Ocultar pastas (Alt+1)'}
           aria-label={sidebarCollapsed ? 'Mostrar pastas' : 'Ocultar pastas'}
@@ -90,9 +90,9 @@ export default function AppToolbar() {
         <button
           onClick={() => setShowTempFolder(!showTempFolder)}
           className={cn(
-            'h-5 w-5 rounded flex items-center justify-center transition-all',
-            'text-neutral-500 hover:text-white hover:bg-white/5',
-            showTempFolder && 'text-white/70 bg-white/10'
+            'h-5 w-5 radius-md flex items-center justify-center trans-all',
+            'text-muted hover:text-primary hover:bg-hover',
+            showTempFolder && 'text-primary/70 bg-primary/10'
           )}
           title={showTempFolder ? 'Ocultar área Temp' : 'Mostrar área Temp'}
           aria-label={showTempFolder ? 'Ocultar área Temp' : 'Mostrar área Temp'}
@@ -103,7 +103,7 @@ export default function AppToolbar() {
 
         <button
           onClick={() => setShowConfig(true)}
-          className="h-5 w-5 rounded flex items-center justify-center transition-all text-neutral-500 hover:text-white hover:bg-white/5"
+          className="h-5 w-5 radius-md flex items-center justify-center trans-all text-muted hover:text-primary hover:bg-hover"
           title="Configurações"
           aria-label="Configurações"
         >
@@ -115,14 +115,14 @@ export default function AppToolbar() {
       <div className="flex-1" />
 
       {/* Right: Playlist toggle + Playback status */}
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-xs">
         <button
           onClick={togglePlaylist}
           className={cn(
-            'h-5 w-5 rounded flex items-center justify-center transition-all',
-            'text-neutral-500 hover:text-white hover:bg-white/5',
-            (isPlaylistOpen && !playlistCollapsed) && 'text-white/70 bg-white/10',
-            isPlaylistOpen && playlistCollapsed && 'text-neutral-400'
+            'h-5 w-5 radius-md flex items-center justify-center trans-all',
+            'text-muted hover:text-primary hover:bg-hover',
+            (isPlaylistOpen && !playlistCollapsed) && 'text-primary/70 bg-primary/10',
+            isPlaylistOpen && playlistCollapsed && 'text-disabled'
           )}
           title={isPlaylistOpen 
             ? (playlistCollapsed ? 'Expandir playlist (Alt+2)' : 'Colapsar playlist (Alt+2)') 
@@ -137,19 +137,19 @@ export default function AppToolbar() {
 
         {repeat !== 'off' && (
           <button
-            className="h-5 w-5 rounded flex items-center justify-center text-neutral-400 hover:text-white hover:bg-white/5 transition-colors"
+            className="h-5 w-5 radius-md flex items-center justify-center text-disabled hover:text-primary hover:bg-hover trans-colors"
             title={`Repetir: ${repeat === 'one' ? 'Uma' : 'Todas'}`}
           >
-            <Repeat className={cn("w-3.5 h-3.5", repeat === 'one' && "text-white")} />
+            <Repeat className={cn("w-3.5 h-3.5", repeat === 'one' && "text-primary")} />
           </button>
         )}
 
         {shuffle && (
           <button
-            className="h-5 w-5 rounded flex items-center justify-center text-neutral-400 hover:text-white hover:bg-white/5 transition-colors"
+            className="h-5 w-5 radius-md flex items-center justify-center text-disabled hover:text-primary hover:bg-hover trans-colors"
             title="Aleatório ativado"
           >
-            <Shuffle className="w-3.5 h-3.5 text-white" />
+            <Shuffle className="w-3.5 h-3.5 text-primary" />
           </button>
         )}
       </div>
