@@ -8,6 +8,7 @@ import { useFileOperations } from '@/hooks/useElectron'
 import { cn, formatFileSize, getFileIcon } from '@/lib/utils'
 import { Button } from '@/components/ui/Button'
 import { ContextMenu, useContextMenu, createFileContextMenuItems } from '@/components/ui/ContextMenu'
+import { getFolderIconConfig, getFolderIconEmoji, getFolderColorVar } from '@/lib/folderIcons'
 
 interface AlbumFilesTabProps {
   album: import('@/types').Album
@@ -23,21 +24,6 @@ interface FileItem {
   size: number
   folder: string
   folderPath: string
-}
-
-function getFolderIcon(name: string) {
-  const icons: Record<string, React.ReactNode> = {
-    artwork: <ImageIcon className="w-5 h-5 text-pink-400" />,
-    masters: <Music2 className="w-5 h-5 text-emerald-400" />,
-    extras: <FolderOpen className="w-5 h-5 text-amber-400" />,
-    audio: <Music2 className="w-5 h-5 text-blue-400" />,
-    stems: <Music2 className="w-5 h-5 text-purple-400" />,
-    projects: <Code className="w-5 h-5 text-orange-400" />,
-    lyrics: <FileText className="w-5 h-5 text-green-400" />,
-    videos: <Video className="w-5 h-5 text-red-400" />,
-    references: <ExternalLink className="w-5 h-5 text-cyan-400" />,
-  }
-  return icons[name] || <FolderOpen className="w-5 h-5 text-neutral-400" />
 }
 
 export function AlbumFilesTab({ album, project, paths, viewMode = 'grid' }: AlbumFilesTabProps) {
@@ -159,26 +145,27 @@ export function AlbumFilesTab({ album, project, paths, viewMode = 'grid' }: Albu
 
   return (
     <>
-      <div className="space-y-4">
+      <div className="space-y-lg">
         {/* Header */}
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-medium text-neutral-300">Arquivos do Álbum</h3>
+          <h3 className="text-body-sm font-medium text-secondary">Arquivos do Álbum</h3>
           <Button variant="outline" size="sm" onClick={() => handleAddFiles('artwork')}>
-            <Plus className="w-3.5 h-3.5 mr-1" />
+            <Plus className="w-3.5 h-3.5 mr-xs" />
             <span>Adicionar</span>
           </Button>
         </div>
 
         {/* File count */}
-        <p className="text-xs text-neutral-500">{totalFiles} arquivo{totalFiles !== 1 ? 's' : ''} no total</p>
+        <p className="text-caption text-muted">{totalFiles} arquivo{totalFiles !== 1 ? 's' : ''} no total</p>
 
         {/* GRID VIEW - Folders as cards (each independent) */}
         {viewMode === 'grid' && (
           <AnimatePresence>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-md">
               {Object.entries(paths.albumSubfolders).map(([folderName, _folderPath]) => {
                 const files = groupedFiles[folderName] || []
                 const isExpanded = expandedFolders.has(folderName)
+                const folderConfig = getFolderIconConfig(folderName)
 
                 return (
                   <motion.div
@@ -186,21 +173,21 @@ export function AlbumFilesTab({ album, project, paths, viewMode = 'grid' }: Albu
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
-                    className="bg-neutral-900/50 border border-neutral-800 rounded-xl overflow-hidden"
+                    className="bg-elevated/50 border border-subtle rounded-xl overflow-hidden"
                   >
                     {/* Folder Header */}
                     <button
                       onClick={() => toggleFolder(folderName)}
-                      className="w-full flex items-center gap-3 p-3 hover:bg-neutral-900 transition-colors text-left"
+                      className="w-full flex items-center gap-md p-md hover:bg-hover trans-colors text-left"
                     >
-                      <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: project.color + '10' }}>
-                        {getFolderIcon(folderName)}
+                      <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: getFolderColorVar(folderName) }}>
+                        <span className="text-lg">{folderConfig.icon}</span>
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-white truncate text-sm">{folderName}</p>
-                        <p className="text-xs text-neutral-500">{files.length} arquivo{files.length !== 1 ? 's' : ''}</p>
+                        <p className="font-medium text-primary truncate text-sm">{folderName}</p>
+                        <p className="text-caption text-muted">{files.length} arquivo{files.length !== 1 ? 's' : ''}</p>
                       </div>
-                      <ChevronDown className={cn("w-4 h-4 text-neutral-400 transition-transform", isExpanded && "rotate-180")} />
+                      <ChevronDown className={cn("w-4 h-4 text-muted transition-transform", isExpanded && "rotate-180")} />
                     </button>
 
                     {/* Files List */}
@@ -210,17 +197,17 @@ export function AlbumFilesTab({ album, project, paths, viewMode = 'grid' }: Albu
                           initial={{ opacity: 0, height: 0 }}
                           animate={{ opacity: 1, height: 'auto' }}
                           exit={{ opacity: 0, height: 0 }}
-                          className="border-t border-neutral-800 overflow-hidden bg-neutral-950/50"
+                          className="border-t border-subtle overflow-hidden bg-elevated/30"
                         >
                           {files.length === 0 ? (
-                            <div className="p-4 text-center text-neutral-500 text-sm">
+                            <div className="p-lg text-center text-muted text-sm">
                               Pasta vazia
-                              <Button variant="ghost" size="sm" className="mt-2" onClick={() => handleAddFiles(folderName)}>
-                                <Plus className="w-3.5 h-3.5 mr-1" /> Adicionar
+                              <Button variant="ghost" size="sm" className="mt-sm" onClick={() => handleAddFiles(folderName)}>
+                                <Plus className="w-3.5 h-3.5 mr-xs" /> Adicionar
                               </Button>
                             </div>
                           ) : (
-                            <div className="divide-y divide-neutral-800 max-h-72 overflow-y-auto">
+                            <div className="divide-y divide-subtle max-h-72 overflow-y-auto">
                               {files.map((file, index) => (
                                 <FileRow
                                   key={file.path}
@@ -251,15 +238,16 @@ export function AlbumFilesTab({ album, project, paths, viewMode = 'grid' }: Albu
 
         {/* LIST VIEW - Collapsible folders with compact headers */}
         {viewMode === 'list' && (
-          <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl overflow-hidden">
-            <div className="divide-y divide-neutral-800 max-h-[60vh] overflow-y-auto">
+          <div className="bg-elevated/50 border border-subtle rounded-xl overflow-hidden">
+            <div className="divide-y divide-subtle max-h-[60vh] overflow-y-auto">
               {Object.keys(paths.albumSubfolders).length === 0 ? (
-                <div className="p-8 text-center text-neutral-500">Nenhuma pasta configurada no álbum</div>
+                <div className="p-2xl text-center text-muted">Nenhuma pasta configurada no álbum</div>
               ) : (
                 <AnimatePresence>
                   {Object.entries(paths.albumSubfolders).map(([folderName, _folderPath], folderIndex) => {
                     const files = groupedFiles[folderName] || []
                     const isExpanded = expandedFolders.has(folderName)
+                    const folderConfig = getFolderIconConfig(folderName)
                     return (
                       <motion.div
                         key={folderName}
@@ -271,17 +259,17 @@ export function AlbumFilesTab({ album, project, paths, viewMode = 'grid' }: Albu
                         {/* Folder Header Row - Click to toggle */}
                         <button
                           onClick={() => toggleFolder(folderName)}
-                          className="grid grid-cols-[40px_1fr_80px_40px] gap-2 px-3 py-1.5 items-center w-full text-left hover:bg-neutral-900/50 transition-colors"
+                          className="grid grid-cols-[40px_1fr_80px_40px] gap-sm px-md py-sm items-center w-full text-left hover:bg-hover trans-colors"
                         >
-                          <div className="w-7 h-7 rounded flex items-center justify-center flex-shrink-0" style={{ backgroundColor: project.color + '10' }}>
-                            {getFolderIcon(folderName)}
+                          <div className="w-7 h-7 rounded flex items-center justify-center flex-shrink-0" style={{ backgroundColor: getFolderColorVar(folderName) }}>
+                            <span className="text-base">{folderConfig.icon}</span>
                           </div>
-                          <div className="flex-1 min-w-0 flex items-center gap-2">
-                            <ChevronDown className={cn("w-3.5 h-3.5 text-neutral-400 transition-transform flex-shrink-0", isExpanded && "rotate-180")} />
-                            <p className="text-sm font-medium text-neutral-300 truncate">{folderName}</p>
+                          <div className="flex-1 min-w-0 flex items-center gap-sm">
+                            <ChevronDown className={cn("w-3.5 h-3.5 text-muted transition-transform flex-shrink-0", isExpanded && "rotate-180")} />
+                            <p className="text-sm font-medium text-secondary truncate">{folderName}</p>
                           </div>
-                          <span className="text-right text-xs text-neutral-500 font-mono">{files.length} arquivo{files.length !== 1 ? 's' : ''}</span>
-                          <div className="flex items-center gap-1 opacity-50" />
+                          <span className="text-right text-caption text-muted font-mono">{files.length} arquivo{files.length !== 1 ? 's' : ''}</span>
+                          <div className="flex items-center gap-xs opacity-50" />
                         </button>
 
                         {/* Files in this folder - Collapsible */}
@@ -311,11 +299,11 @@ export function AlbumFilesTab({ album, project, paths, viewMode = 'grid' }: Albu
                                   />
                                 ))
                               ) : (
-                                <div className="grid grid-cols-[40px_1fr_80px_40px] gap-2 px-3 py-2 items-center text-center text-neutral-500 border-t border-neutral-800">
+                                <div className="grid grid-cols-[40px_1fr_80px_40px] gap-sm px-md py-md items-center text-center text-muted border-t border-subtle">
                                   <div className="col-span-4">
                                     Pasta vazia
-                                    <Button variant="ghost" size="sm" className="ml-2" onClick={(e) => { e.stopPropagation(); handleAddFiles(folderName) }}>
-                                      <Plus className="w-3.5 h-3.5 mr-1" /> Adicionar
+                                    <Button variant="ghost" size="sm" className="ml-sm" onClick={(e) => { e.stopPropagation(); handleAddFiles(folderName) }}>
+                                      <Plus className="w-3.5 h-3.5 mr-xs" /> Adicionar
                                     </Button>
                                   </div>
                                 </div>
@@ -365,7 +353,7 @@ interface FileRowProps {
 
 function FileRow({ file, projectColor, renaming, renameValue, onRenameChange, onStartRename, onRename, onOpen, onDelete, onContextMenu, isListView, index }: FileRowProps) {
   const isRenaming = renaming === file.path
-  const rowStyle = isListView ? "grid grid-cols-[40px_1fr_80px_40px] gap-2 px-3 py-1.5 items-center hover:bg-neutral-900/50 transition-colors" : "flex items-center gap-3 p-2 hover:bg-neutral-900/50 transition-colors"
+  const rowStyle = isListView ? "grid grid-cols-[40px_1fr_80px_40px] gap-sm px-md py-sm items-center hover:bg-hover trans-colors" : "flex items-center gap-md p-sm hover:bg-hover trans-colors"
 
   return (
     <motion.div
@@ -376,7 +364,7 @@ function FileRow({ file, projectColor, renaming, renameValue, onRenameChange, on
       onContextMenu={(e) => onContextMenu(e, file)}
     >
       {/* File Icon */}
-      <div className="w-7 h-7 rounded flex items-center justify-center flex-shrink-0" style={{ backgroundColor: projectColor + '10' }}>
+      <div className="w-7 h-7 rounded flex items-center justify-center flex-shrink-0" style={{ backgroundColor: `hsl(var(--project-color) / var(--project-color-subtle))` }}>
         {getFileIcon(file.name)}
       </div>
 
@@ -388,29 +376,29 @@ function FileRow({ file, projectColor, renaming, renameValue, onRenameChange, on
             onChange={e => onRenameChange(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && onRename(file.path)}
             onBlur={() => onRename(file.path)}
-            className="w-full bg-neutral-800 border border-neutral-600 rounded px-2 py-1 text-sm text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+            className="w-full bg-neutral-800 border border-neutral-600 rounded px-sm py-xs text-sm text-white focus:outline-none focus:ring-2 focus:ring-white/20"
             autoFocus
           />
         ) : (
-          <p className="text-sm font-medium text-white truncate">{file.name}</p>
+          <p className="text-sm font-medium text-primary truncate">{file.name}</p>
         )}
-        {!isListView && <p className="text-xs text-neutral-500">{formatFileSize(file.size)}</p>}
+        {!isListView && <p className="text-caption text-muted">{formatFileSize(file.size)}</p>}
       </div>
 
       {/* List view only: Size column */}
       {isListView && (
-        <span className="text-right text-xs text-neutral-500 font-mono">{formatFileSize(file.size)}</span>
+        <span className="text-right text-caption text-muted font-mono">{formatFileSize(file.size)}</span>
       )}
 
       {/* Actions */}
-      <div className={cn("flex items-center gap-1", isListView ? "opacity-100" : "opacity-0 group-hover:opacity-100 transition-opacity")}>
-        <button onClick={(e) => { e.stopPropagation(); onOpen(file.path) }} className="w-7 h-7 rounded bg-white/5 hover:bg-white/10 flex items-center justify-center text-neutral-400 hover:text-white transition-colors" title="Abrir">
+      <div className={cn("flex items-center gap-xs", isListView ? "opacity-100" : "opacity-0 group-hover:opacity-100 trans-opacity")}>
+        <button onClick={(e) => { e.stopPropagation(); onOpen(file.path) }} className="w-7 h-7 rounded bg-white/5 hover:bg-white/10 flex items-center justify-center text-neutral-400 hover:text-white trans-colors" title="Abrir">
           <ExternalLink className="w-3.5 h-3.5" />
         </button>
-        <button onClick={(e) => { e.stopPropagation(); onStartRename(file) }} className="w-7 h-7 rounded bg-white/5 hover:bg-white/10 flex items-center justify-center text-neutral-400 hover:text-white transition-colors" title="Renomear">
+        <button onClick={(e) => { e.stopPropagation(); onStartRename(file) }} className="w-7 h-7 rounded bg-white/5 hover:bg-white/10 flex items-center justify-center text-neutral-400 hover:text-white trans-colors" title="Renomear">
           <Edit2 className="w-3.5 h-3.5" />
         </button>
-        <button onClick={(e) => { e.stopPropagation(); onDelete(file.path, file.folder) }} className="w-7 h-7 rounded bg-white/5 hover:bg-red-600/20 flex items-center justify-center text-neutral-400 hover:text-red-400 transition-colors" title="Deletar">
+        <button onClick={(e) => { e.stopPropagation(); onDelete(file.path, file.folder) }} className="w-7 h-7 rounded bg-white/5 hover:bg-red-600/20 flex items-center justify-center text-neutral-400 hover:text-red-400 trans-colors" title="Deletar">
           <Trash2 className="w-3.5 h-3.5" />
         </button>
       </div>
