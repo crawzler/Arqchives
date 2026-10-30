@@ -96,8 +96,8 @@ function FolderTreeNode({
     <div className="select-none">
       <div
         className={cn(
-          "flex items-center gap-1 px-1 py-1 rounded transition-colors cursor-pointer",
-          "hover:bg-white/5",
+          "flex items-center gap-xs px-xs py-xs rounded trans-colors cursor-pointer",
+          "hover:bg-hover",
           isActiveTarget && "bg-emerald-500/10 border-l-2 border-emerald-500",
           draggingNode?.path === node.path && "opacity-50",
           "select-none",
@@ -115,7 +115,7 @@ function FolderTreeNode({
         {hasChildren ? (
           <motion.button
             onClick={(e) => { e.stopPropagation(); onToggleExpand(node.path) }}
-            className="w-5 h-5 flex items-center justify-center text-neutral-500 hover:text-white hover:bg-white/5 rounded transition-colors"
+            className="w-5 h-5 flex items-center justify-center text-muted hover:text-primary hover:bg-hover rounded trans-colors"
             aria-label={expanded ? 'Colapsar' : 'Expandir'}
           >
             <ChevronRight className="w-3.5 h-3.5" style={{ transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)' }} />
@@ -124,27 +124,27 @@ function FolderTreeNode({
           <span className="w-5" />
         )}
         
-        <div className="flex items-center gap-2 flex-1 min-w-0">
+        <div className="flex items-center gap-sm flex-1 min-w-0">
           {node.isFile ? (
             <>
               <div className="w-5 h-5 flex items-center justify-center flex-shrink-0">
                 {getFileIcon(node.ext || '')}
               </div>
-              <span className="text-xs text-neutral-300 truncate" title={node.name}>{node.name}</span>
+              <span className="text-caption text-secondary truncate" title={node.name}>{node.name}</span>
               {node.size !== undefined && (
-                <span className="text-[10px] text-neutral-500 flex-shrink-0 ml-auto">{(node.size / 1024).toFixed(1)} KB</span>
+                <span className="text-[10px] text-muted flex-shrink-0 ml-auto">{(node.size / 1024).toFixed(1)} KB</span>
               )}
             </>
           ) : (
             <>
               <Folder className="w-4 h-4 text-amber-400/80 flex-shrink-0" />
-              <span className="text-xs font-medium text-neutral-200 truncate" title={node.name}>{node.name}</span>
+              <span className="text-caption font-medium text-primary truncate" title={node.name}>{node.name}</span>
             </>
           )}
         </div>
 
         {!node.isFile && hasChildren && (
-          <span className="text-[10px] text-neutral-600 px-1.5 py-0.5 rounded bg-neutral-800">
+          <span className="text-[10px] text-muted px-xs py-[1px] rounded bg-neutral-800">
             {node.children!.length}
           </span>
         )}
@@ -267,12 +267,12 @@ function FolderTree({
   }
 
   const getFileIcon = (ext: string) => {
-    if (AUDIO_EXTS.includes(ext)) return <Music className="w-4 h-4 text-emerald-400" />
-    if (IMAGE_EXTS.includes(ext)) return <Image className="w-4 h-4 text-blue-400" />
-    if (VIDEO_EXTS.includes(ext)) return <Video className="w-4 h-4 text-purple-400" />
-    if (['.zip', '.rar', '.7z'].includes(ext)) return <File className="w-4 h-4 text-amber-400" />
-    if (['.rpp', '.als', '.flp', '.logic', '.ptx'].includes(ext)) return <Code className="w-4 h-4 text-orange-400" />
-    return <File className="w-4 h-4 text-neutral-400" />
+    if (AUDIO_EXTS.includes(ext)) return <Music className="w-4 h-4" style={{ color: 'hsl(var(--color-status-completed))' }} />
+    if (IMAGE_EXTS.includes(ext)) return <Image className="w-4 h-4" style={{ color: 'hsl(var(--color-status-in_progress))' }} />
+    if (VIDEO_EXTS.includes(ext)) return <Video className="w-4 h-4" style={{ color: 'hsl(var(--color-status-planned))' }} />
+    if (['.zip', '.rar', '.7z'].includes(ext)) return <File className="w-4 h-4" style={{ color: 'hsl(var(--color-type-compilation))' }} />
+    if (['.rpp', '.als', '.flp', '.logic', '.ptx'].includes(ext)) return <Code className="w-4 h-4" style={{ color: 'hsl(var(--color-folder-projects))' }} />
+    return <File className="w-4 h-4 text-muted" />
   }
 
   const buildTree = async (dirPath: string, name: string): Promise<FolderNode> => {
@@ -354,16 +354,16 @@ function FolderTree({
 
   if (!projectPaths?.projectPath) {
     return (
-      <div className="flex-1 flex items-center justify-center text-neutral-500 text-xs">
+      <div className="flex-1 flex items-center justify-center text-muted text-caption">
         Nenhum projeto selecionado
       </div>
     )
   }
 
   return (
-    <div className="flex-1 overflow-y-auto p-2 space-y-1">
+    <div className="flex-1 overflow-y-auto pad-md gap-xs">
       {loading ? (
-        <div className="flex items-center justify-center h-32 text-neutral-500 text-xs">
+        <div className="flex items-center justify-center h-32 text-muted text-caption">
           Carregando estrutura...
         </div>
       ) : tree ? (
@@ -396,7 +396,7 @@ function FolderTree({
           )}
         </>
       ) : (
-        <div className="flex items-center justify-center h-32 text-neutral-500 text-xs">
+        <div className="flex items-center justify-center h-32 text-muted text-caption">
           Pasta do projeto não encontrada
         </div>
       )}
@@ -532,15 +532,15 @@ function ProjectSelector({
   }
 
   return (
-    <div ref={dropdownRef} className="relative p-2 border-b border-neutral-800 bg-neutral-950">
+    <div ref={dropdownRef} className="relative pad-sm border-b border-subtle bg-base">
       <button
         onClick={() => setOpen(!open)}
         className={cn(
-          "w-full flex items-center gap-2 px-2 py-2 rounded-lg transition-colors",
-          "hover:bg-neutral-800 text-left"
+          "w-full flex items-center gap-sm px-sm py-sm rounded-lg trans-colors",
+          "hover:bg-hover text-left"
         )}
       >
-        <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden bg-neutral-800">
+        <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden bg-hover">
           {activeProjectPhotoUrl ? (
             <img src={activeProjectPhotoUrl} alt="" className="w-full h-full object-cover" />
           ) : (
@@ -548,10 +548,10 @@ function ProjectSelector({
           )}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium text-white truncate">{activeProject?.name || 'Selecione...'}</p>
-          {activeProject?.genre && <p className="text-[10px] text-neutral-500 truncate">{activeProject.genre}</p>}
+          <p className="text-body-sm font-medium text-primary truncate">{activeProject?.name || 'Selecione...'}</p>
+          {activeProject?.genre && <p className="text-[10px] text-muted truncate">{activeProject.genre}</p>}
         </div>
-        <ChevronDown className={cn("w-4 h-4 text-neutral-500 transition-transform", open && "rotate-180")} />
+        <ChevronDown className={cn("w-4 h-4 text-muted trans-transform", open && "rotate-180")} />
       </button>
 
       <AnimatePresence>
@@ -560,33 +560,32 @@ function ProjectSelector({
             initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
-            className="absolute left-2 right-2 mt-1 bg-neutral-950 border border-neutral-800 rounded-lg shadow-xl z-20 max-h-80 overflow-y-auto"
+            className="absolute left-sm right-sm mt-xs bg-base border border-subtle rounded-lg shadow-elev-4 z-dropdown max-h-80 overflow-y-auto"
           >
             {projects.length === 0 ? (
               // Empty state for no projects
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="p-6 space-y-4"
+                className="pad-xl gap-lg"
               >
-                <div className="flex flex-col items-center gap-3 text-center">
+                <div className="flex flex-col items-center gap-md text-center">
                   <motion.div
                     animate={{ scale: [1, 1.05, 1], rotate: [0, 2, -2, 0] }}
                     transition={{ duration: 3, repeat: Infinity }}
                     className="w-14 h-14 rounded-2xl flex items-center justify-center"
-                    style={{ background: 'linear-gradient(135deg, hsl(var(--primary))/20 0%, hsl(var(--accent))/10 100%)', border: '1px solid hsl(var(--primary))/30' }}
+                    style={{ background: 'linear-gradient(135deg, hsl(var(--primary))/20 0%, hsl(var(--accent))/10 100%)', border: '1px solid hsl(var(--primary)/0.3)' }}
                   >
-                    <Sparkles className="w-7 h-7 text-white" style={{ color: 'hsl(var(--primary))' }} />
+                    <Sparkles className="w-7 h-7 text-primary" />
                   </motion.div>
                   <div className="text-center">
-                    <h3 className="font-semibold text-white text-sm">Nenhum projeto ainda</h3>
-                    <p className="text-[11px] text-neutral-500 mt-1">Crie seu primeiro projeto para começar a organizar</p>
+                    <h3 className="text-heading-sm text-primary">Nenhum projeto ainda</h3>
+                    <p className="text-caption text-muted mt-xs">Crie seu primeiro projeto para começar a organizar</p>
                   </div>
                 </div>
                 <Button 
                   size="lg" 
-                  className="w-full gap-2" 
-                  style={{ '--accent': 'hsl(var(--primary))' }}
+                  className="w-full gap-sm" 
                   onClick={() => {
                     setOpen(false)
                     window.dispatchEvent(new CustomEvent('arqchives:new-project'))
@@ -595,7 +594,7 @@ function ProjectSelector({
                   <Plus className="w-4 h-4" />
                   <span className="font-medium">Criar Primeiro Projeto</span>
                 </Button>
-                <p className="text-center text-[10px] text-neutral-500">
+                <p className="text-center text-[10px] text-muted">
                   Projetos guardam álbuns, faixas, arquivos e configurações
                 </p>
               </motion.div>
@@ -611,37 +610,37 @@ function ProjectSelector({
                         initial={{ opacity: 0, x: -10 }}
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: -10 }}
-                        className="p-2 space-y-2 border-b border-neutral-800"
+                        className="pad-sm gap-sm border-b border-subtle"
                       >
                         <input
                           value={editForm.name}
                           onChange={e => setEditForm({ ...editForm, name: e.target.value })}
                           placeholder="Nome do projeto"
-                          className="w-full bg-neutral-800 border border-neutral-700 rounded px-2 py-1.5 text-xs text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+                          className="w-full bg-hover border border-default radius-md px-sm py-xs text-caption text-primary focus:outline-none focus:ring-2 focus:ring-white/20"
                           autoFocus
                         />
                         <input
                           value={editForm.genre}
                           onChange={e => setEditForm({ ...editForm, genre: e.target.value })}
                           placeholder="Gênero (opcional)"
-                          className="w-full bg-neutral-800 border border-neutral-700 rounded px-2 py-1.5 text-xs text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+                          className="w-full bg-hover border border-default radius-md px-sm py-xs text-caption text-primary focus:outline-none focus:ring-2 focus:ring-white/20"
                         />
-                        <div className="space-y-2">
-                          <label className="text-xs text-neutral-400">Foto do projeto</label>
-                          <div className="flex items-center gap-3">
+                        <div className="gap-xs">
+                          <label className="text-caption text-muted">Foto do projeto</label>
+                          <div className="flex items-center gap-sm">
                             <div className="relative">
                               <button
                                 type="button"
                                 onClick={handleEditPhotoSelect}
                                 className={cn(
-                                  "w-16 h-16 rounded-xl border-2 border-dashed border-neutral-700 flex items-center justify-center overflow-hidden transition-colors",
+                                  "w-16 h-16 rounded-xl border-2 border-dashed border-default flex items-center justify-center overflow-hidden trans-colors",
                                   editPhotoPreview ? "border-emerald-500" : "hover:border-white/30"
                                 )}
                               >
                                 {editPhotoPreview ? (
                                   <img src={editPhotoPreview} alt="Preview" className="w-full h-full object-cover" />
                                 ) : (
-                                  <div className="flex flex-col items-center gap-1 text-neutral-500">
+                                  <div className="flex flex-col items-center gap-xs text-muted">
                                     <Image className="w-5 h-5" />
                                     <span className="text-[10px]">Adicionar</span>
                                   </div>
@@ -649,17 +648,17 @@ function ProjectSelector({
                               </button>
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className="text-xs text-neutral-400">Clique para selecionar uma imagem</p>
-                              <p className="text-[10px] text-neutral-500 mt-0.5">PNG, JPG, WebP • Máx. 2MB</p>
+                              <p className="text-caption text-muted">Clique para selecionar uma imagem</p>
+                              <p className="text-[10px] text-muted mt-[2px]">PNG, JPG, WebP • Máx. 2MB</p>
                               {editPhotoPreview && (
-                                <Button variant="ghost" size="sm" className="mt-2 text-red-400 hover:text-red-300" onClick={() => { setEditPhotoPreview(null); setEditForm({ ...editForm, photo: '' }); }}>
+                                <Button variant="ghost" size="sm" className="mt-sm text-red-400 hover:text-red-300" onClick={() => { setEditPhotoPreview(null); setEditForm({ ...editForm, photo: '' }); }}>
                                   Remover foto
                                 </Button>
                               )}
                             </div>
                           </div>
                         </div>
-                        <div className="flex gap-2 pt-1">
+                        <div className="flex gap-xs pt-xs">
                           <Button variant="secondary" size="sm" className="flex-1" onClick={() => { setEditingProjectId(null); setEditForm({ name: '', genre: '', photo: '', photoFilePath: '' }); setEditPhotoPreview(null); }}>
                             Cancelar
                           </Button>
@@ -672,7 +671,7 @@ function ProjectSelector({
                             className="text-red-400 hover:text-red-300 hover:bg-red-600/20" 
                             onClick={() => { handleDelete(project.id, project.name); setEditingProjectId(null); setEditForm({ name: '', genre: '', photo: '', photoFilePath: '' }); setEditPhotoPreview(null); }}
                           >
-                            <Trash2 className="w-3.5 h-3.5 mr-1" />
+                            <Trash2 className="w-3.5 h-3.5 mr-xs" />
                             Excluir
                           </Button>
                         </div>
@@ -685,11 +684,11 @@ function ProjectSelector({
                       <button
                         onClick={() => { onSelect(project.id); setOpen(false); }}
                         className={cn(
-                          "w-full flex items-center gap-2 px-2 py-2 rounded transition-colors text-left",
-                          activeProjectId === project.id ? "bg-white/5" : "hover:bg-neutral-800"
+                          "w-full flex items-center gap-sm px-sm py-sm rounded trans-colors text-left",
+                          activeProjectId === project.id ? "bg-white/5" : "hover:bg-hover"
                         )}
                       >
-                        <div className="w-6 h-6 rounded flex items-center justify-center flex-shrink-0 overflow-hidden bg-neutral-800">
+                        <div className="w-6 h-6 rounded flex items-center justify-center flex-shrink-0 overflow-hidden bg-hover">
                           {projectPhotoUrls[project.id] ? (
                             <img src={projectPhotoUrls[project.id]} alt="" className="w-full h-full object-cover" />
                           ) : (
@@ -697,16 +696,16 @@ function ProjectSelector({
                           )}
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="text-sm font-medium text-white truncate">{project.name}</p>
-                          {project.genre && <p className="text-[10px] text-neutral-500 truncate">{project.genre}</p>}
+                          <p className="text-body-sm font-medium text-primary truncate">{project.name}</p>
+                          {project.genre && <p className="text-[10px] text-muted truncate">{project.genre}</p>}
                         </div>
                         {activeProjectId === project.id && (
-                          <div className="w-1.5 h-1.5 rounded-full flex-shrink-0 bg-white" />
+                          <div className="w-1.5 h-1.5 rounded-full flex-shrink-0 bg-primary" />
                         )}
                         {/* Edit button - visible on hover */}
                         <button
                           onClick={(e) => { e.stopPropagation(); startEditing(project); }}
-                          className="w-7 h-7 rounded flex items-center justify-center text-neutral-500 hover:text-white hover:bg-neutral-800 transition-colors opacity-0 group-hover:opacity-100 flex-shrink-0"
+                          className="w-7 h-7 rounded flex items-center justify-center text-muted hover:text-primary hover:bg-hover trans-colors opacity-0 group-hover:opacity-100 flex-shrink-0"
                           title="Editar"
                         >
                           <Edit2 className="w-4 h-4" />
@@ -820,45 +819,45 @@ function TempFolder({ appRoot }: { appRoot: string | null }) {
   if (!tempPath) return null
 
   const getFileIcon = (ext: string) => {
-    if (AUDIO_EXTS.includes(ext)) return <Music className="w-6 h-6 text-emerald-400" />
-    if (IMAGE_EXTS.includes(ext)) return <Image className="w-6 h-6 text-blue-400" />
-    if (VIDEO_EXTS.includes(ext)) return <Video className="w-6 h-6 text-purple-400" />
-    if (['.zip', '.rar', '.7z'].includes(ext)) return <File className="w-6 h-6 text-amber-400" />
-    if (['.rpp', '.als', '.flp'].includes(ext)) return <Code className="w-6 h-6 text-orange-400" />
-    return <File className="w-6 h-6 text-neutral-400" />
+    if (AUDIO_EXTS.includes(ext)) return <Music className="w-6 h-6" style={{ color: 'hsl(var(--color-status-completed))' }} />
+    if (IMAGE_EXTS.includes(ext)) return <Image className="w-6 h-6" style={{ color: 'hsl(var(--color-status-in_progress))' }} />
+    if (VIDEO_EXTS.includes(ext)) return <Video className="w-6 h-6" style={{ color: 'hsl(var(--color-status-planned))' }} />
+    if (['.zip', '.rar', '.7z'].includes(ext)) return <File className="w-6 h-6" style={{ color: 'hsl(var(--color-type-compilation))' }} />
+    if (['.rpp', '.als', '.flp'].includes(ext)) return <Code className="w-6 h-6" style={{ color: 'hsl(var(--color-folder-projects))' }} />
+    return <File className="w-6 h-6 text-muted" />
   }
 
   return (
     <>
       <motion.div
         ref={ref}
-        className={cn("border-t border-neutral-800 p-2", dropping && "bg-white/5")}
+        className={cn("border-t border-subtle pad-sm", dropping && "bg-white/5")}
         animate={{ opacity: dropping ? 1 : 0.7 }}
       >
-      <div className="flex items-center justify-between px-1 py-1.5">
-        <div className="flex items-center gap-1.5">
-          <div className="w-4 h-4 rounded bg-neutral-800 flex items-center justify-center">
-            <RotateCw className="w-3 h-3 text-amber-400" />
+      <div className="flex items-center justify-between px-xs py-xs">
+        <div className="flex items-center gap-xs">
+          <div className="w-4 h-4 rounded bg-hover flex items-center justify-center">
+            <RotateCw className="w-3 h-3" style={{ color: 'hsl(var(--color-folder-extras))' }} />
           </div>
-          <span className="text-xs font-medium text-neutral-300">Temp</span>
+          <span className="text-caption font-medium text-secondary">Temp</span>
         </div>
-        <div className="flex items-center gap-0.5">
+        <div className="flex items-center gap-xs">
           <Button variant="ghost" size="icon" className="w-6 h-6 p-0" onClick={loadFiles} title="Atualizar"><RotateCw className="w-3 h-3" /></Button>
         </div>
       </div>
 
-      <div className="px-1 pb-1">
+      <div className="px-xs pb-xs">
         {files.length === 0 ? (
-          <div className={cn("h-24 rounded-lg flex flex-col items-center justify-center gap-1.5 text-neutral-500 border border-dashed border-neutral-700", dropping && "bg-white/5 border-amber-400")}>
+          <div className={cn("h-24 radius-lg flex flex-col items-center justify-center gap-sm text-muted border border-dashed border-default", dropping && "bg-white/5 border-amber-400")}>
             <RotateCw className="w-6 h-6" />
-            <span className="text-xs">{dropping ? 'Soltar aqui' : 'Arraste arquivos aqui'}</span>
+            <span className="text-caption">{dropping ? 'Soltar aqui' : 'Arraste arquivos aqui'}</span>
           </div>
         ) : (
-          <div className="grid grid-cols-3 gap-1.5">
+          <div className="grid grid-cols-3 gap-xs">
             {files.map((f) => (
               <motion.div
                 key={f.path}
-                className="group relative rounded-lg bg-neutral-900/50 border border-neutral-800 overflow-hidden hover:border-neutral-700 transition-colors cursor-pointer"
+                className="group relative radius-lg bg-neutral-900/50 border border-subtle overflow-hidden hover:border-default trans-colors cursor-pointer"
                 whileHover={{ scale: 1.02 }}
                 onClick={() => handleFileClick(f.path)}
                 onContextMenu={(e) => handleFileContextMenu(e, f)}
@@ -866,17 +865,17 @@ function TempFolder({ appRoot }: { appRoot: string | null }) {
                 onDragStart={() => setDraggingFile({ path: f.path, sourceFolder: tempPath! })}
                 onDragEnd={() => setDraggingFile(null)}
               >
-                <div className="aspect-square relative flex items-center justify-center p-1">
+                <div className="aspect-square relative flex items-center justify-center p-xs">
                   {IMAGE_EXTS.includes(f.ext) && fileUrls[f.path] && <img src={fileUrls[f.path]} alt={f.name} className="w-full h-full object-cover rounded" loading="lazy" />}
                   {!IMAGE_EXTS.includes(f.ext) && <div className="flex items-center justify-center w-full h-full">{getFileIcon(f.ext)}</div>}
                 </div>
-                <div className="p-1.5">
-                  <p className="text-xs font-medium text-white truncate">{f.name}</p>
-                  <p className="text-[9px] text-neutral-500 mt-0.5">{(f.size / 1024).toFixed(1)} KB</p>
+                <div className="pad-xs">
+                  <p className="text-caption font-medium text-primary truncate">{f.name}</p>
+                  <p className="text-[9px] text-muted mt-[2px]">{(f.size / 1024).toFixed(1)} KB</p>
                 </div>
-                <div className="absolute top-0.5 right-0.5 flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button onClick={(e) => { e.stopPropagation(); dragOutFile(f.path) }} className="w-5 h-5 rounded bg-black/50 hover:bg-black/70 text-neutral-300 flex items-center justify-center" title="Arrastar para fora"><Search className="w-2.5 h-2.5" /></button>
-                  <button onClick={(e) => { e.stopPropagation(); handleDelete(f.path, f.name) }} className="w-5 h-5 rounded bg-black/50 hover:bg-red-600/30 text-neutral-300 hover:text-red-400 flex items-center justify-center" title="Deletar"><Trash2 className="w-2.5 h-2.5" /></button>
+                <div className="absolute top-xs right-xs flex gap-xs opacity-0 group-hover:opacity-100 trans-opacity">
+                  <button onClick={(e) => { e.stopPropagation(); dragOutFile(f.path) }} className="w-5 h-5 rounded bg-black/50 hover:bg-black/70 text-secondary flex items-center justify-center" title="Arrastar para fora"><Search className="w-2.5 h-2.5" /></button>
+                  <button onClick={(e) => { e.stopPropagation(); handleDelete(f.path, f.name) }} className="w-5 h-5 rounded bg-black/50 hover:bg-red-600/30 text-secondary hover:text-red-400 flex items-center justify-center trans-colors" title="Deletar"><Trash2 className="w-2.5 h-2.5" /></button>
                 </div>
               </motion.div>
             ))}
@@ -913,7 +912,7 @@ export default function Sidebar() {
 
   return (
     <>
-      <aside className="w-full h-full bg-neutral-950 border-r border-neutral-800 flex flex-col overflow-hidden">
+      <aside className="w-full h-full bg-base border-r border-subtle flex flex-col overflow-hidden">
         {/* Project Selector */}
         <ProjectSelector
           projects={projects}
