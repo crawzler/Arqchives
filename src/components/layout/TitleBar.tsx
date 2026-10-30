@@ -8,35 +8,35 @@ export default function TitleBar() {
   const { minimize, maximize, close } = useWindowControls()
 
   return (
-    <header className="h-10 bg-neutral-950 border-b border-neutral-800 flex items-center justify-between select-none drag-region">
+    <header className="h-10 bg-base border-b border-subtle flex items-center justify-between select-none drag-region">
       {/* Logo / Título */}
-      <div className="flex items-center px-4 gap-2 no-drag-region">
+      <div className="flex items-center px-lg gap-sm no-drag-region">
         <AppIcon size={16} />
-        <span className="text-xs font-bold tracking-tight text-neutral-300">ARQCHIVES</span>
+        <span className="text-caption font-bold tracking-tight text-secondary">ARQCHIVES</span>
       </div>
 
       {/* Controles da Janela */}
-      <div className="flex items-center no-drag-region h-full gap-1 pr-2">
+      <div className="flex items-center no-drag-region h-full gap-xs pr-sm">
         <button
           onClick={minimize}
-          className="w-12 h-full flex items-center justify-center hover:bg-neutral-800 transition-colors"
+          className="w-12 h-full flex items-center justify-center hover:bg-hover trans-colors"
           title="Minimizar"
         >
-          <Minus className="w-3.5 h-3.5 text-neutral-400" />
+          <Minus className="w-3.5 h-3.5 text-muted" />
         </button>
         <button
           onClick={maximize}
-          className="w-12 h-full flex items-center justify-center hover:bg-neutral-800 transition-colors"
+          className="w-12 h-full flex items-center justify-center hover:bg-hover trans-colors"
           title="Maximizar"
         >
-          <Square className="w-3 h-3 text-neutral-400" />
+          <Square className="w-3 h-3 text-muted" />
         </button>
         <button
           onClick={close}
-          className="w-12 h-full flex items-center justify-center hover:bg-red-600 group transition-colors"
+          className="w-12 h-full flex items-center justify-center hover:bg-red-600 group trans-colors"
           title="Fechar"
         >
-          <X className="w-4 h-4 text-neutral-400 group-hover:text-white" />
+          <X className="w-4 h-4 text-muted group-hover:text-primary" />
         </button>
       </div>
 
