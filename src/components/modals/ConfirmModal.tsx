@@ -29,30 +29,30 @@ export function ConfirmModal({ message, onConfirm, onClose, variant = 'danger', 
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+      className="fixed inset-0 z-modal flex items-center justify-center bg-black/60 backdrop-blur-sm pad-lg"
       onClick={onClose}
     >
       <motion.div
         initial={{ scale: 0.95, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.95, opacity: 0 }}
-        className="bg-neutral-900 border border-neutral-700 rounded-xl shadow-2xl w-full max-w-md"
+        className="bg-elevated border border-default radius-xl shadow-elev-5 w-full max-w-md"
         onClick={e => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between p-4 border-b border-neutral-800">
-          <h2 className="text-lg font-semibold">{title || 'Confirmação'}</h2>
-          <button onClick={onClose} className="w-8 h-8 rounded-lg hover:bg-white/10 flex items-center justify-center text-neutral-400 hover:text-white"><X className="w-4 h-4" /></button>
+        <div className="flex items-center justify-between pad-lg border-b border-subtle">
+          <h2 className="text-heading-sm font-semibold">{title || 'Confirmação'}</h2>
+          <button onClick={onClose} className="w-8 h-8 radius-lg hover:bg-hover flex items-center justify-center text-muted hover:text-primary trans-colors"><X className="w-4 h-4" /></button>
         </div>
 
-        <div className="p-6 space-y-4">
-          <div className="flex items-start gap-3">
-            <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0", iconColor)}>
+        <div className="pad-xl gap-lg">
+          <div className="flex items-start gap-md">
+            <div className={cn("w-10 h-10 radius-lg flex items-center justify-center flex-shrink-0", iconColor)}>
               <Icon className="w-5 h-5" />
             </div>
-            <p className="text-neutral-300 text-sm leading-relaxed">{message}</p>
+            <p className="text-secondary text-body-sm leading-relaxed">{message}</p>
           </div>
 
-          <div className="flex gap-2 pt-2">
+          <div className="flex gap-sm pt-sm">
             <Button variant="secondary" className="flex-1" onClick={onClose}>{cancelText || 'Cancelar'}</Button>
             <Button className={cn("flex-1", btnColor)} onClick={onConfirm}>
               {confirmText || (variant === 'danger' ? 'Deletar' : 'Confirmar')}
