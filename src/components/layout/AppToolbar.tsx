@@ -76,7 +76,7 @@ export default function AppToolbar() {
         <button
           onClick={toggleSidebar}
           className={cn(
-            'h-5 w-5 radius-md flex items-center justify-center trans-all',
+            'h-5 w-5 radius-md flex items-center justify-center trans-all focus-ring',
             'text-muted hover:text-primary hover:bg-hover',
             sidebarCollapsed && 'text-primary/70 bg-primary/10'
           )}
@@ -90,7 +90,7 @@ export default function AppToolbar() {
         <button
           onClick={() => setShowTempFolder(!showTempFolder)}
           className={cn(
-            'h-5 w-5 radius-md flex items-center justify-center trans-all',
+            'h-5 w-5 radius-md flex items-center justify-center trans-all focus-ring',
             'text-muted hover:text-primary hover:bg-hover',
             showTempFolder && 'text-primary/70 bg-primary/10'
           )}
@@ -103,7 +103,7 @@ export default function AppToolbar() {
 
         <button
           onClick={() => setShowConfig(true)}
-          className="h-5 w-5 radius-md flex items-center justify-center trans-all text-muted hover:text-primary hover:bg-hover"
+          className="h-5 w-5 radius-md flex items-center justify-center trans-all focus-ring text-muted hover:text-primary hover:bg-hover"
           title="Configurações"
           aria-label="Configurações"
         >
@@ -119,7 +119,7 @@ export default function AppToolbar() {
         <button
           onClick={togglePlaylist}
           className={cn(
-            'h-5 w-5 radius-md flex items-center justify-center trans-all',
+            'h-5 w-5 radius-md flex items-center justify-center trans-all focus-ring',
             'text-muted hover:text-primary hover:bg-hover',
             (isPlaylistOpen && !playlistCollapsed) && 'text-primary/70 bg-primary/10',
             isPlaylistOpen && playlistCollapsed && 'text-disabled'
@@ -137,7 +137,7 @@ export default function AppToolbar() {
 
         {repeat !== 'off' && (
           <button
-            className="h-5 w-5 radius-md flex items-center justify-center text-disabled hover:text-primary hover:bg-hover trans-colors"
+            className="h-5 w-5 radius-md flex items-center justify-center text-disabled hover:text-primary hover:bg-hover trans-colors focus-ring"
             title={`Repetir: ${repeat === 'one' ? 'Uma' : 'Todas'}`}
           >
             <Repeat className={cn("w-3.5 h-3.5", repeat === 'one' && "text-primary")} />
@@ -146,7 +146,7 @@ export default function AppToolbar() {
 
         {shuffle && (
           <button
-            className="h-5 w-5 radius-md flex items-center justify-center text-disabled hover:text-primary hover:bg-hover trans-colors"
+            className="h-5 w-5 radius-md flex items-center justify-center text-disabled hover:text-primary hover:bg-hover trans-colors focus-ring"
             title="Aleatório ativado"
           >
             <Shuffle className="w-3.5 h-3.5 text-primary" />

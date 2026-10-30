@@ -121,7 +121,7 @@ export function ResizablePanel({
           ref={handleRef}
           onMouseDown={handleMouseDown}
           className={cn(
-            'absolute top-0 bottom-0 w-[4px] flex items-center justify-center trans-colors select-none',
+            'absolute top-0 bottom-0 w-[4px] flex items-center justify-center trans-colors select-none focus-ring-inset',
             'hover:bg-default hover:w-[6px]',
             isResizing && 'bg-muted/50 w-[6px]',
             position === 'left' ? 'right-0 cursor-ew-resize' : 'left-0 cursor-ew-resize',
@@ -155,7 +155,7 @@ export function ResizablePanel({
         <button
           onClick={handleCollapseClick}
           className={cn(
-            'absolute top-sm z-modal w-8 h-8 radius-lg bg-base border border-subtle flex items-center justify-center text-muted hover:text-primary hover:bg-hover trans-all',
+            'absolute top-sm z-modal w-8 h-8 radius-lg bg-base border border-subtle flex items-center justify-center text-muted hover:text-primary hover:bg-hover trans-all focus-ring',
             position === 'left'
               ? 'right-sm'
               : 'left-sm'
@@ -175,7 +175,7 @@ export function ResizablePanel({
         <button
           onClick={handleCollapseClick}
           className={cn(
-            'absolute top-sm z-modal w-8 h-8 radius-lg bg-base border border-subtle flex items-center justify-center text-muted hover:text-primary hover:bg-hover trans-all',
+            'absolute top-sm z-modal w-8 h-8 radius-lg bg-base border border-subtle flex items-center justify-center text-muted hover:text-primary hover:bg-hover trans-all focus-ring',
             position === 'left'
               ? 'left-sm'
               : 'right-sm'

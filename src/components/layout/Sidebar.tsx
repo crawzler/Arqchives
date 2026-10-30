@@ -115,7 +115,7 @@ function FolderTreeNode({
         {hasChildren ? (
           <motion.button
             onClick={(e) => { e.stopPropagation(); onToggleExpand(node.path) }}
-            className="w-5 h-5 flex items-center justify-center text-muted hover:text-primary hover:bg-hover rounded trans-colors"
+            className="w-5 h-5 flex items-center justify-center text-muted hover:text-primary hover:bg-hover rounded trans-colors focus-ring"
             aria-label={expanded ? 'Colapsar' : 'Expandir'}
           >
             <ChevronRight className="w-3.5 h-3.5" style={{ transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)' }} />
@@ -537,7 +537,8 @@ function ProjectSelector({
         onClick={() => setOpen(!open)}
         className={cn(
           "w-full flex items-center gap-sm px-sm py-sm rounded-lg trans-colors",
-          "hover:bg-hover text-left"
+          "hover:bg-hover text-left",
+          "focus-ring"
         )}
       >
         <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden bg-hover">
@@ -633,8 +634,8 @@ function ProjectSelector({
                                 type="button"
                                 onClick={handleEditPhotoSelect}
                                 className={cn(
-                                  "w-16 h-16 rounded-xl border-2 border-dashed border-default flex items-center justify-center overflow-hidden trans-colors",
-                                  editPhotoPreview ? "border-emerald-500" : "hover:border-white/30"
+                                  "w-16 h-16 rounded-xl border-2 border-dashed border-default flex items-center justify-center overflow-hidden trans-colors focus-ring",
+                                  editPhotoPreview ? "border-emerald-500" : "hover:border-primary/30"
                                 )}
                               >
                                 {editPhotoPreview ? (
@@ -684,7 +685,7 @@ function ProjectSelector({
                       <button
                         onClick={() => { onSelect(project.id); setOpen(false); }}
                         className={cn(
-                          "w-full flex items-center gap-sm px-sm py-sm rounded trans-colors text-left",
+                          "w-full flex items-center gap-sm px-sm py-sm rounded trans-colors text-left focus-ring",
                           activeProjectId === project.id ? "bg-white/5" : "hover:bg-hover"
                         )}
                       >
@@ -705,7 +706,7 @@ function ProjectSelector({
                         {/* Edit button - visible on hover */}
                         <button
                           onClick={(e) => { e.stopPropagation(); startEditing(project); }}
-                          className="w-7 h-7 rounded flex items-center justify-center text-muted hover:text-primary hover:bg-hover trans-colors opacity-0 group-hover:opacity-100 flex-shrink-0"
+                          className="w-7 h-7 rounded flex items-center justify-center text-muted hover:text-primary hover:bg-hover trans-colors opacity-0 group-hover:opacity-100 flex-shrink-0 focus-ring"
                           title="Editar"
                         >
                           <Edit2 className="w-4 h-4" />
@@ -874,8 +875,8 @@ function TempFolder({ appRoot }: { appRoot: string | null }) {
                   <p className="text-[9px] text-muted mt-[2px]">{(f.size / 1024).toFixed(1)} KB</p>
                 </div>
                 <div className="absolute top-xs right-xs flex gap-xs opacity-0 group-hover:opacity-100 trans-opacity">
-                  <button onClick={(e) => { e.stopPropagation(); dragOutFile(f.path) }} className="w-5 h-5 rounded bg-black/50 hover:bg-black/70 text-secondary flex items-center justify-center" title="Arrastar para fora"><Search className="w-2.5 h-2.5" /></button>
-                  <button onClick={(e) => { e.stopPropagation(); handleDelete(f.path, f.name) }} className="w-5 h-5 rounded bg-black/50 hover:bg-red-600/30 text-secondary hover:text-red-400 flex items-center justify-center trans-colors" title="Deletar"><Trash2 className="w-2.5 h-2.5" /></button>
+                  <button onClick={(e) => { e.stopPropagation(); dragOutFile(f.path) }} className="w-5 h-5 rounded bg-black/50 hover:bg-black/70 text-secondary flex items-center justify-center focus-ring" title="Arrastar para fora"><Search className="w-2.5 h-2.5" /></button>
+                  <button onClick={(e) => { e.stopPropagation(); handleDelete(f.path, f.name) }} className="w-5 h-5 rounded bg-black/50 hover:bg-red-600/30 text-secondary hover:text-red-400 flex items-center justify-center trans-colors focus-ring" title="Deletar"><Trash2 className="w-2.5 h-2.5" /></button>
                 </div>
               </motion.div>
             ))}

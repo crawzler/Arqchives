@@ -250,6 +250,8 @@
     --ease-in-out:     cubic-bezier(0.4, 0, 0.2, 1);
     --ease-spring:     cubic-bezier(0.34, 1.56, 0.64, 1);
     --ease-bounce:     cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    --ease-expo-out:   cubic-bezier(0.19, 1, 0.22, 1);
+    --ease-expo-in-out: cubic-bezier(0.87, 0, 0.13, 1);
 
     /* Semantic transitions */
     --transition-colors:    color var(--duration-fast) var(--ease-out),
@@ -259,6 +261,62 @@
     --transition-opacity:   opacity var(--duration-fast) var(--ease-out);
     --transition-all:       all var(--duration-normal) var(--ease-out);
     --transition-shadow:    box-shadow var(--duration-normal) var(--ease-out);
+
+    /* Semantic motion tokens for common patterns */
+    --motion-enter:         transform var(--duration-normal) var(--ease-out), opacity var(--duration-fast) var(--ease-out);
+    --motion-exit:          transform var(--duration-fast) var(--ease-in), opacity var(--duration-fast) var(--ease-in);
+    --motion-slide-up:      transform var(--duration-slow) var(--ease-expo-out), opacity var(--duration-normal) var(--ease-out);
+    --motion-slide-down:    transform var(--duration-slow) var(--ease-expo-out), opacity var(--duration-normal) var(--ease-out);
+    --motion-scale:         transform var(--duration-normal) var(--ease-spring);
+    --motion-scale-spring:  transform var(--duration-slower) var(--ease-spring);
+
+    /* Focus ring - critical for accessibility */
+    --focus-ring-width:     2px;
+    --focus-ring-offset:    2px;
+    --focus-ring-color:     hsl(var(--ring));
+    --focus-ring:           var(--focus-ring-width) solid var(--focus-ring-color);
+    --focus-ring-offset:    var(--focus-ring-offset) solid hsl(var(--color-bg-base));
+  }
+}
+
+/* ==========================================================================
+   REDUCED MOTION SUPPORT
+   ========================================================================== */
+
+@layer base {
+  @media (prefers-reduced-motion: reduce) {
+    :root {
+      /* Disable all non-essential animations */
+      --duration-instant: 0ms;
+      --duration-fast:    0ms;
+      --duration-normal:  0ms;
+      --duration-slow:    0ms;
+      --duration-slower:  0ms;
+
+      /* Override semantic transitions to instant */
+      --transition-colors:    none;
+      --transition-transform: none;
+      --transition-opacity:   none;
+      --transition-all:       none;
+      --transition-shadow:    none;
+
+      --motion-enter:         none;
+      --motion-exit:          none;
+      --motion-slide-up:      none;
+      --motion-slide-down:    none;
+      --motion-scale:         none;
+      --motion-scale-spring:  none;
+    }
+
+    /* Disable CSS animations and transitions globally */
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 }
 
@@ -447,4 +505,28 @@
   .trans-opacity { transition: var(--transition-opacity); }
   .trans-all { transition: var(--transition-all); }
   .trans-shadow { transition: var(--transition-shadow); }
+
+  /* Motion */
+  .motion-enter { transition: var(--motion-enter); }
+  .motion-exit { transition: var(--motion-exit); }
+  .motion-slide-up { transition: var(--motion-slide-up); }
+  .motion-slide-down { transition: var(--motion-slide-down); }
+  .motion-scale { transition: var(--motion-scale); }
+  .motion-scale-spring { transition: var(--motion-scale-spring); }
+
+  /* Focus ring - Accessibility */
+  .focus-ring {
+    outline: none;
+  }
+  .focus-ring:focus-visible {
+    outline: var(--focus-ring);
+    outline-offset: var(--focus-ring-offset);
+  }
+  .focus-ring-inset:focus-visible {
+    outline: var(--focus-ring);
+    outline-offset: calc(var(--focus-ring-offset) * -1);
+  }
+  .focus-ring-none:focus-visible {
+    outline: none;
+  }
 }

@@ -139,7 +139,7 @@ export function PlaylistPanel({
           {/* Close/Hide button on the left */}
           <button
             onClick={onClose}
-            className="w-7 h-7 radius-lg bg-hover hover:bg-default flex items-center justify-center text-muted hover:text-primary trans-colors"
+            className="w-7 h-7 radius-lg bg-hover hover:bg-default flex items-center justify-center text-muted hover:text-primary trans-colors focus-ring"
             aria-label="Esconder playlist"
           >
             <ChevronLeft className="w-4 h-4" />
@@ -157,7 +157,7 @@ export function PlaylistPanel({
           <button
             onClick={() => setShuffle(!shuffle)}
             className={cn(
-              "w-7 h-7 radius-lg flex items-center justify-center text-muted hover:text-primary hover:bg-hover trans-colors",
+              "w-7 h-7 radius-lg flex items-center justify-center text-muted hover:text-primary hover:bg-hover trans-colors focus-ring",
               shuffle ? "text-primary" : ""
             )}
             aria-label="Aleatório"
@@ -168,7 +168,7 @@ export function PlaylistPanel({
           <button
             onClick={() => setRepeat(repeat === 'off' ? 'all' : repeat === 'all' ? 'one' : 'off')}
             className={cn(
-              "w-7 h-7 radius-lg flex items-center justify-center text-muted hover:text-primary hover:bg-hover trans-colors",
+              "w-7 h-7 radius-lg flex items-center justify-center text-muted hover:text-primary hover:bg-hover trans-colors focus-ring",
               repeat !== 'off' ? "text-primary" : ""
             )}
             aria-label={repeat === 'off' ? 'Repetir desligado' : repeat === 'all' ? 'Repetir tudo' : 'Repetir um'}
@@ -179,7 +179,7 @@ export function PlaylistPanel({
           <button
             onClick={() => setShowClearConfirm(true)}
             disabled={queue.length === 0}
-            className="w-7 h-7 radius-lg flex items-center justify-center text-muted hover:text-amber-400 hover:bg-amber-900/30 trans-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            className="w-7 h-7 radius-lg flex items-center justify-center text-muted hover:text-amber-400 hover:bg-amber-900/30 trans-colors disabled:opacity-40 disabled:cursor-not-allowed focus-ring"
             aria-label="Limpar fila (manter faixa atual)"
           >
             <Eraser className="w-3.5 h-3.5" />
@@ -203,13 +203,13 @@ export function PlaylistPanel({
             <div className="flex justify-end gap-sm">
               <button
                 onClick={() => setShowClearConfirm(false)}
-                className="px-md py-xs text-body-sm font-medium text-secondary hover:text-primary bg-hover hover:bg-default radius-lg trans-colors"
+                className="px-md py-xs text-body-sm font-medium text-secondary hover:text-primary bg-hover hover:bg-default radius-lg trans-colors focus-ring"
               >
                 Cancelar
               </button>
               <button
                 onClick={handleClearQueue}
-                className="px-md py-xs text-body-sm font-medium text-primary bg-red-600 hover:bg-red-500 radius-lg trans-colors"
+                className="px-md py-xs text-body-sm font-medium text-primary bg-red-600 hover:bg-red-500 radius-lg trans-colors focus-ring"
               >
                 Confirmar
               </button>
@@ -237,10 +237,10 @@ export function PlaylistPanel({
                 const isCurrent = index === currentIndex
                 
                 return (
-                  <li
+                  <button
                     key={`${item.track.id}-${index}`}
                     className={cn(
-                      "relative group flex items-center gap-sm px-sm py-xs radius-lg cursor-pointer",
+                      "relative group flex items-center gap-sm px-sm py-xs radius-lg w-full text-left cursor-pointer focus-ring",
                       isCurrent
                         ? "bg-hover"
                         : "hover:bg-hover"
@@ -264,7 +264,7 @@ export function PlaylistPanel({
                       {isCurrent && (
                         <button
                           onClick={(e) => { e.stopPropagation(); setIsPlaying(!isPlaying); }}
-                          className="absolute inset-0 flex items-center justify-center bg-black/40 hover:bg-black/50 trans-colors"
+                          className="absolute inset-0 flex items-center justify-center bg-black/40 hover:bg-black/50 trans-colors focus-ring"
                           aria-label={isPlaying ? 'Pausar' : 'Reproduzir'}
                         >
                           {isPlaying ? (
@@ -293,12 +293,12 @@ export function PlaylistPanel({
                     {/* Remove button - floating on the right */}
                     <button
                       onClick={(e) => { e.stopPropagation(); removeFromQueue(index) }}
-                      className="absolute right-xs top-1/2 -translate-y-1/2 w-5 h-5 radius flex items-center justify-center text-muted hover:text-red-400 hover:bg-red-900/30 trans-colors opacity-0 group-hover:opacity-100"
+                      className="absolute right-xs top-1/2 -translate-y-1/2 w-5 h-5 radius flex items-center justify-center text-muted hover:text-red-400 hover:bg-red-900/30 trans-colors opacity-0 group-hover:opacity-100 focus-ring"
                       aria-label="Remover da fila"
                     >
                       <X className="w-3 h-3" />
                     </button>
-                  </li>
+                  </button>
                 )
               })}
             </ul>

@@ -332,7 +332,7 @@ export function AudioPlayer({ src, onEnded, className, onPlaylistPlay, isPlaying
           {/* Skip Back - 15s */}
           <button
             onClick={() => skip(-15)}
-            className="w-8 h-8 radius-full text-muted hover:text-primary hover:bg-hover flex items-center justify-center trans-colors"
+            className="w-8 h-8 radius-full text-muted hover:text-primary hover:bg-hover flex items-center justify-center trans-colors focus-ring"
             title="Retroceder 15s"
           >
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -344,7 +344,7 @@ export function AudioPlayer({ src, onEnded, className, onPlaylistPlay, isPlaying
           {/* Play/Pause - Main button with project color */}
           <button
             onClick={togglePlay}
-            className="relative w-10 h-10 radius-full flex items-center justify-center text-black trans-colors shadow-elev-3"
+            className="relative w-10 h-10 radius-full flex items-center justify-center text-black trans-colors shadow-elev-3 focus-ring"
             style={{
               backgroundColor: projectColor,
               boxShadow: `0 0 20px ${projectColor}CC`
@@ -357,7 +357,7 @@ export function AudioPlayer({ src, onEnded, className, onPlaylistPlay, isPlaying
           {/* Skip Forward - 15s */}
           <button
             onClick={() => skip(15)}
-            className="w-8 h-8 radius-full text-muted hover:text-primary hover:bg-hover flex items-center justify-center trans-colors"
+            className="w-8 h-8 radius-full text-muted hover:text-primary hover:bg-hover flex items-center justify-center trans-colors focus-ring"
             title="Avançar 15s"
           >
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -372,7 +372,7 @@ export function AudioPlayer({ src, onEnded, className, onPlaylistPlay, isPlaying
           {/* Repeat */}
           <button
             onClick={() => setLoop(!loop)}
-            className={cn("w-8 h-8 radius-full flex items-center justify-center text-primary trans-colors", loop && "bg-hover")}
+            className={cn("w-8 h-8 radius-full flex items-center justify-center text-primary trans-colors focus-ring", loop && "bg-hover")}
             title="Repetir"
           >
             <Repeat className="w-3.5 h-3.5" />
@@ -382,7 +382,7 @@ export function AudioPlayer({ src, onEnded, className, onPlaylistPlay, isPlaying
           <div className="flex items-center gap-sm">
             <button
               onClick={() => { const a = audioRef.current; if (a) { a.muted = !a.muted; setVolume(a.muted ? 0 : a.volume || 1) } }}
-              className="w-8 h-8 flex items-center justify-center text-muted hover:text-primary trans-colors"
+              className="w-8 h-8 flex items-center justify-center text-muted hover:text-primary trans-colors focus-ring"
               aria-label={volume === 0 ? 'Ativar som' : 'Mutar'}
             >
               {volume === 0 ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}

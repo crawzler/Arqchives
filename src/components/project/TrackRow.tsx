@@ -66,14 +66,14 @@ export function TrackRow({ track, index, projectColor, albumCover, onOpen, onEdi
   const trackNumber = track.number || index
 
   return (
-    <div
+    <button
       onClick={onOpen}
       onContextMenu={onContextMenu}
       className={cn(
         "w-full flex items-center gap-sm px-md py-sm",
         "rounded-lg",
         "bg-subtle border border-subtle cursor-pointer",
-        "hover:border-muted hover:bg-hover trans-colors text-left"
+        "hover:border-muted hover:bg-hover trans-colors text-left focus-ring"
       )}
       style={{ borderColor: `hsl(var(--color-border-default) / var(--project-color-muted))` }}
     >
@@ -107,7 +107,7 @@ export function TrackRow({ track, index, projectColor, albumCover, onOpen, onEdi
       {onAddToPlaylist && track.audioVersions?.length > 0 && (
         <button
           onClick={(e) => { e.stopPropagation(); onAddToPlaylist() }}
-          className="w-7 h-7 rounded-lg bg-white/5 hover:bg-emerald-600/20 flex items-center justify-center text-neutral-500 hover:text-emerald-400 trans-colors flex-shrink-0 ml-xs"
+          className="w-7 h-7 rounded-lg bg-white/5 hover:bg-emerald-600/20 flex items-center justify-center text-neutral-500 hover:text-emerald-400 trans-colors flex-shrink-0 ml-xs focus-ring"
           title="Adicionar à Playlist"
         >
           <ListMusic className="w-3.5 h-3.5" />
@@ -118,12 +118,12 @@ export function TrackRow({ track, index, projectColor, albumCover, onOpen, onEdi
       {onContextMenu && (
         <button
           onClick={(e) => { e.stopPropagation(); onContextMenu(e) }}
-          className="w-7 h-7 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center text-neutral-500 hover:text-white trans-colors flex-shrink-0 ml-xs"
+          className="w-7 h-7 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center text-neutral-500 hover:text-white trans-colors flex-shrink-0 ml-xs focus-ring"
           title="Mais opções"
         >
           <MoreHorizontal className="w-3.5 h-3.5" />
         </button>
       )}
-    </div>
+    </button>
   )
 }

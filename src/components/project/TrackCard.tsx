@@ -69,7 +69,7 @@ export function TrackCard({ track, index, projectColor, albumCover, onOpen, onCo
   const trackNumber = track.number || index
 
   return (
-    <motion.div
+    <motion.button
       onClick={onOpen}
       onContextMenu={onContextMenu}
       whileHover={{ y: -4 }}
@@ -78,7 +78,7 @@ export function TrackCard({ track, index, projectColor, albumCover, onOpen, onCo
         "flex flex-col rounded-xl",
         "bg-elevated/50 border border-subtle cursor-pointer",
         "hover:border-muted hover:bg-elevated trans-all",
-        "group relative overflow-hidden"
+        "group relative overflow-hidden focus-ring"
       )}
       style={{ borderColor: `hsl(var(--color-border-default) / var(--project-color-muted))` }}
     >
@@ -130,7 +130,7 @@ export function TrackCard({ track, index, projectColor, albumCover, onOpen, onCo
         {onAddToPlaylist && track.audioVersions?.length > 0 && (
           <button
             onClick={(e) => { e.stopPropagation(); onAddToPlaylist() }}
-            className="w-8 h-8 rounded-lg bg-black/50 backdrop-blur-sm hover:bg-emerald-600/20 flex items-center justify-center text-emerald-400 hover:text-emerald-300 trans-colors border border-white/10"
+            className="w-8 h-8 rounded-lg bg-black/50 backdrop-blur-sm hover:bg-emerald-600/20 flex items-center justify-center text-emerald-400 hover:text-emerald-300 trans-colors border border-white/10 focus-ring"
             title="Adicionar à Playlist"
           >
             <ListMusic className="w-4 h-4" />
@@ -139,13 +139,13 @@ export function TrackCard({ track, index, projectColor, albumCover, onOpen, onCo
         {onContextMenu && (
           <button
             onClick={(e) => { e.stopPropagation(); onContextMenu(e) }}
-            className="w-8 h-8 rounded-lg bg-black/50 backdrop-blur-sm hover:bg-black/70 flex items-center justify-center text-neutral-400 hover:text-white trans-colors border border-white/10"
+            className="w-8 h-8 rounded-lg bg-black/50 backdrop-blur-sm hover:bg-black/70 flex items-center justify-center text-neutral-400 hover:text-white trans-colors border border-white/10 focus-ring"
             title="Mais opções"
           >
             <MoreHorizontal className="w-4 h-4" />
           </button>
         )}
       </div>
-    </motion.div>
+    </motion.button>
   )
 }

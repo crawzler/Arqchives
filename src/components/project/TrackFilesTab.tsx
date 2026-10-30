@@ -182,7 +182,7 @@ export function TrackFilesTab({ track, album, project, paths, viewMode = 'grid' 
                     {/* Folder Header */}
                     <button
                       onClick={() => toggleFolder(folderName)}
-                      className="w-full flex items-center gap-md p-md hover:bg-hover trans-colors text-left"
+                      className="w-full flex items-center gap-md p-md hover:bg-hover trans-colors text-left focus-ring"
                     >
                       <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: getFolderColorVar(folderName) }}>
                         <span className="text-lg">{folderConfig.icon}</span>
@@ -263,7 +263,7 @@ export function TrackFilesTab({ track, album, project, paths, viewMode = 'grid' 
                         {/* Folder Header Row - Click to toggle */}
                         <button
                           onClick={() => toggleFolder(folderName)}
-                          className="grid grid-cols-[40px_1fr_80px_40px] gap-sm px-md py-sm items-center w-full text-left hover:bg-hover trans-colors"
+                          className="grid grid-cols-[40px_1fr_80px_40px] gap-sm px-md py-sm items-center w-full text-left hover:bg-hover trans-colors focus-ring"
                         >
                           <div className="w-7 h-7 rounded flex items-center justify-center flex-shrink-0" style={{ backgroundColor: getFolderColorVar(folderName) }}>
                             <span className="text-base">{folderConfig.icon}</span>
@@ -380,7 +380,7 @@ function FileRow({ file, projectColor, renaming, renameValue, onRenameChange, on
             onChange={e => onRenameChange(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && onRename(file.path)}
             onBlur={() => onRename(file.path)}
-            className="w-full bg-neutral-800 border border-neutral-600 rounded px-sm py-xs text-sm text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+            className="w-full bg-neutral-800 border border-neutral-600 rounded px-sm py-xs text-sm text-white focus-ring"
             autoFocus
           />
         ) : (
@@ -396,13 +396,13 @@ function FileRow({ file, projectColor, renaming, renameValue, onRenameChange, on
 
       {/* Actions */}
       <div className={cn("flex items-center gap-xs", isListView ? "opacity-100" : "opacity-0 group-hover:opacity-100 trans-opacity")}>
-        <button onClick={(e) => { e.stopPropagation(); onOpen(file.path) }} className="w-7 h-7 rounded bg-white/5 hover:bg-white/10 flex items-center justify-center text-neutral-400 hover:text-white trans-colors" title="Abrir">
+        <button onClick={(e) => { e.stopPropagation(); onOpen(file.path) }} className="w-7 h-7 rounded bg-white/5 hover:bg-white/10 flex items-center justify-center text-neutral-400 hover:text-white trans-colors focus-ring" title="Abrir">
           <ExternalLink className="w-3.5 h-3.5" />
         </button>
-        <button onClick={(e) => { e.stopPropagation(); onStartRename(file) }} className="w-7 h-7 rounded bg-white/5 hover:bg-white/10 flex items-center justify-center text-neutral-400 hover:text-white trans-colors" title="Renomear">
+        <button onClick={(e) => { e.stopPropagation(); onStartRename(file) }} className="w-7 h-7 rounded bg-white/5 hover:bg-white/10 flex items-center justify-center text-neutral-400 hover:text-white trans-colors focus-ring" title="Renomear">
           <Edit2 className="w-3.5 h-3.5" />
         </button>
-        <button onClick={(e) => { e.stopPropagation(); onDelete(file.path, file.folder) }} className="w-7 h-7 rounded bg-white/5 hover:bg-red-600/20 flex items-center justify-center text-neutral-400 hover:text-red-400 trans-colors" title="Deletar">
+        <button onClick={(e) => { e.stopPropagation(); onDelete(file.path, file.folder) }} className="w-7 h-7 rounded bg-white/5 hover:bg-red-600/20 flex items-center justify-center text-neutral-400 hover:text-red-400 trans-colors focus-ring" title="Deletar">
           <Trash2 className="w-3.5 h-3.5" />
         </button>
       </div>

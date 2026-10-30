@@ -101,7 +101,7 @@ export function TrackTodos({
       <button
         ref={triggerRef}
         className={cn(
-          "flex items-center gap-1.5 px-2 py-1 rounded-lg transition-colors",
+          "flex items-center gap-1.5 px-2 py-1 rounded-lg trans-colors focus-ring",
           todos.length > 0 ? "text-white hover:bg-white/10" : "text-neutral-500 hover:text-white hover:bg-white/5"
         )}
         onClick={openPopover}
@@ -124,7 +124,7 @@ export function TrackTodos({
           >
             <div className="p-4 border-b border-neutral-800 flex items-center justify-between">
               <h3 className="font-semibold text-white">Tarefas da Faixa</h3>
-              <button onClick={closePopover} className="w-8 h-8 rounded-lg hover:bg-white/10 flex items-center justify-center text-neutral-400 hover:text-white"><X className="w-4 h-4" /></button>
+              <button onClick={closePopover} className="w-8 h-8 rounded-lg hover:bg-white/10 flex items-center justify-center text-neutral-400 hover:text-white focus-ring"><X className="w-4 h-4" /></button>
             </div>
 
             {onAdd && (
@@ -133,7 +133,7 @@ export function TrackTodos({
                   value={newTodoText}
                   onChange={e => setNewTodoText(e.target.value)}
                   placeholder="Nova tarefa..."
-                  className="flex-1 bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+                  className="flex-1 bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2 text-sm text-white focus-ring"
                   autoFocus
                 />
                 <Button type="submit" size="sm" style={{ '--accent': projectColor }}>
@@ -174,7 +174,7 @@ export function TrackTodos({
                           <input
                             value={editText}
                             onChange={e => setEditText(e.target.value)}
-                            className="flex-1 bg-neutral-800 border border-neutral-600 rounded px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+                            className="flex-1 bg-neutral-800 border border-neutral-600 rounded px-3 py-2 text-sm text-white focus-ring"
                             autoFocus
                             onKeyDown={e => e.key === 'Enter' && handleEditSave(todo.id)}
                           />
@@ -206,14 +206,14 @@ export function TrackTodos({
                           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                             <button
                               onClick={() => { setEditingId(todo.id); setEditText(todo.text) }}
-                              className="w-8 h-8 rounded-lg hover:bg-white/10 flex items-center justify-center text-neutral-400 hover:text-white"
+                              className="w-8 h-8 rounded-lg hover:bg-white/10 flex items-center justify-center text-neutral-400 hover:text-white focus-ring"
                               title="Editar"
                             >
                               <Edit2 className="w-4 h-4" />
                             </button>
                             <button
                               onClick={() => onDelete?.(todo.id)}
-                              className="w-8 h-8 rounded-lg hover:bg-red-600/20 flex items-center justify-center text-neutral-400 hover:text-red-400"
+                              className="w-8 h-8 rounded-lg hover:bg-red-600/20 flex items-center justify-center text-neutral-400 hover:text-red-400 focus-ring"
                               title="Deletar"
                             >
                               <Trash2 className="w-4 h-4" />

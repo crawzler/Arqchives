@@ -203,7 +203,7 @@ export default function AlbumDetail({ albumId, project, onBack, onOpenTrack }: {
         <div className="flex items-center gap-4">
           <button
             onClick={onBack}
-            className="w-9 h-9 rounded-lg bg-neutral-900 border border-neutral-700 flex items-center justify-center text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors"
+            className="w-9 h-9 rounded-lg bg-neutral-900 border border-neutral-700 flex items-center justify-center text-neutral-400 hover:text-white hover:bg-neutral-800 trans-colors focus-ring"
           >
             <ChevronLeft className="w-5 h-5" />
           </button>
@@ -219,10 +219,10 @@ export default function AlbumDetail({ albumId, project, onBack, onOpenTrack }: {
             )}
             <button
               onClick={handleSelectCover}
-              className="absolute inset-0 bg-black/0 hover:bg-black/40 transition-colors flex items-center justify-center"
+              className="absolute inset-0 bg-black/0 hover:bg-black/40 trans-colors flex items-center justify-center focus-ring"
               title="Trocar capa"
             >
-              <ImageIcon className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+              <ImageIcon className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 trans-opacity" />
             </button>
           </div>
 
@@ -454,7 +454,7 @@ function Tracklist({ tracks, projectColor, onOpenTrack, onEdit, onDelete, onDrop
         </p>
         <div className="flex items-center justify-center gap-2">
           <button
-            className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-sm font-medium transition-colors"
+            className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-sm font-medium trans-colors focus-ring"
             onClick={() => window.electronAPI?.selectFiles({
               title: 'Adicionar músicas',
               filters: [{ name: 'Áudio', extensions: ['mp3', 'wav', 'flac', 'aiff', 'ogg', 'm4a', 'aac', 'wma'] }],

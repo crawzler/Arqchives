@@ -87,7 +87,7 @@ export default function AlbumCard({ album, project, projectColor, onClick, onEdi
 
   return (
     <>
-      <motion.div
+      <motion.button
         ref={cardRef}
         onClick={onClick}
         onMouseEnter={() => setHovered(true)}
@@ -97,7 +97,7 @@ export default function AlbumCard({ album, project, projectColor, onClick, onEdi
         transition={{ type: 'spring', stiffness: 400, damping: 25 }}
         className={cn(
           "relative group bg-neutral-900 border rounded-xl overflow-hidden cursor-pointer",
-          "hover:border-muted trans-all"
+          "hover:border-muted trans-all focus-ring"
         )}
         style={{ borderColor: `hsl(var(--color-border-default) / var(--project-color-strong))` }}
       >
@@ -171,8 +171,7 @@ export default function AlbumCard({ album, project, projectColor, onClick, onEdi
               className="w-8 h-8 rounded-lg bg-black/50 hover:bg-black/70 backdrop-blur-sm
                 flex items-center justify-center text-neutral-400 hover:text-white
                 border border-subtle hover:border-muted trans-all
-                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/20
-                opacity-0 group-hover:opacity-100 transition-opacity"
+                opacity-0 group-hover:opacity-100 transition-opacity focus-ring"
               title="Editar álbum"
             >
               <Edit2 className="w-4 h-4" />
@@ -195,7 +194,7 @@ export default function AlbumCard({ album, project, projectColor, onClick, onEdi
             </div>
           </div>
         </div>
-      </motion.div>
+      </motion.button>
 
       {menuItems && (
         <ContextMenu

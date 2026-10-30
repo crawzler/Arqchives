@@ -76,7 +76,7 @@ export function ContextMenu({ items, x, y, onClose }: ContextMenuProps) {
             disabled={item.disabled}
             className={cn(
               "w-full flex items-center gap-sm px-md py-sm text-body-sm text-primary",
-              "focus:outline-none",
+              "focus-ring",
               "hover:bg-hover trans-colors",
               item.disabled && "opacity-50 cursor-not-allowed text-disabled",
               item.danger && "text-red-400 hover:bg-red-600/10"

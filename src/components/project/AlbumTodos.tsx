@@ -104,7 +104,7 @@ export function AlbumTodos({
       <button
         ref={triggerRef}
         className={cn(
-          "flex items-center gap-1.5 px-2 py-1 rounded-lg transition-colors",
+          "flex items-center gap-1.5 px-2 py-1 rounded-lg trans-colors focus-ring",
           todos.length > 0 ? "text-white hover:bg-white/10" : "text-neutral-500 hover:text-white hover:bg-white/5"
         )}
         onClick={openPopover}
@@ -128,7 +128,7 @@ export function AlbumTodos({
           >
             <div className="p-4 border-b border-neutral-800 flex items-center justify-between">
               <h3 className="font-semibold text-white">Tarefas do Álbum</h3>
-              <button onClick={closePopover} className="w-8 h-8 rounded-lg hover:bg-white/10 flex items-center justify-center text-neutral-400 hover:text-white"><X className="w-4 h-4" /></button>
+              <button onClick={closePopover} className="w-8 h-8 rounded-lg hover:bg-white/10 flex items-center justify-center text-neutral-400 hover:text-white focus-ring"><X className="w-4 h-4" /></button>
             </div>
 
             {/* Add Todo Form */}
@@ -138,7 +138,7 @@ export function AlbumTodos({
                   value={newTodoText}
                   onChange={e => setNewTodoText(e.target.value)}
                   placeholder="Nova tarefa..."
-                  className="flex-1 bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+                  className="flex-1 bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2 text-sm text-white focus-ring"
                   autoFocus
                 />
                 <Button type="submit" size="sm" style={{ '--accent': projectColor }}>
@@ -181,7 +181,7 @@ export function AlbumTodos({
                           <input
                             value={editText}
                             onChange={e => setEditText(e.target.value)}
-                            className="flex-1 bg-neutral-800 border border-neutral-600 rounded px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+                            className="flex-1 bg-neutral-800 border border-neutral-600 rounded px-3 py-2 text-sm text-white focus-ring"
                             autoFocus
                             onKeyDown={e => e.key === 'Enter' && handleEditSave(todo.id)}
                           />
@@ -190,7 +190,7 @@ export function AlbumTodos({
                         </form>
                       ) : (
                         <div
-                          className="flex items-center gap-2 p-3 hover:bg-neutral-800/50 transition-colors"
+                          className="flex items-center gap-2 p-3 hover:bg-neutral-800/50 trans-colors"
                           draggable
                           onDragStart={e => handleDragStart(e, todo.id)}
                           onDragOver={e => handleDragOver(e)}
@@ -199,7 +199,7 @@ export function AlbumTodos({
                           <button
                             onClick={() => onToggle(todo.id)}
                             className={cn(
-                              "w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all",
+                              "w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 trans-colors",
                               todo.done
                                 ? "bg-green-500 border-green-500 text-white"
                                 : "border-neutral-600 text-transparent hover:border-white/30"
@@ -210,17 +210,17 @@ export function AlbumTodos({
                           <span className={cn("flex-1 text-sm truncate", todo.done && "line-through text-neutral-500")}>
                             {todo.text}
                           </span>
-                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 trans-opacity">
                             <button
                               onClick={() => { setEditingId(todo.id); setEditText(todo.text) }}
-                              className="w-8 h-8 rounded-lg hover:bg-white/10 flex items-center justify-center text-neutral-400 hover:text-white"
+                              className="w-8 h-8 rounded-lg hover:bg-white/10 flex items-center justify-center text-neutral-400 hover:text-white focus-ring"
                               title="Editar"
                             >
                               <Edit2 className="w-4 h-4" />
                             </button>
                             <button
                               onClick={() => onDelete?.(todo.id)}
-                              className="w-8 h-8 rounded-lg hover:bg-red-600/20 flex items-center justify-center text-neutral-400 hover:text-red-400"
+                              className="w-8 h-8 rounded-lg hover:bg-red-600/20 flex items-center justify-center text-neutral-400 hover:text-red-400 focus-ring"
                               title="Deletar"
                             >
                               <Trash2 className="w-4 h-4" />

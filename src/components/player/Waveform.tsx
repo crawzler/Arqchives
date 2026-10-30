@@ -288,10 +288,37 @@ export function Waveform({ audioPath, currentTime, duration, color = 'hsl(var(--
 
   return (
     <div
-      className={cn("relative w-full cursor-pointer", className)}
+      className={cn("relative w-full cursor-pointer focus-ring", className)}
       aria-label="Forma de onda do áudio"
       onClick={handleClick}
       onMouseDown={handleDragStart}
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (!onSeek) return
+        const effectiveDuration = duration > 0 ? duration : decodedDuration
+        if (effectiveDuration === 0) return
+        
+        const currentPercent = effectiveDuration > 0 ? currentTime / effectiveDuration : 0
+        let newPercent = currentPercent
+        
+        if (e.key === 'ArrowLeft') {
+          e.preventDefault()
+          newPercent = Math.max(0, currentPercent - 0.05) // 5% step
+        } else if (e.key === 'ArrowRight') {
+          e.preventDefault()
+          newPercent = Math.min(1, currentPercent + 0.05) // 5% step
+        } else if (e.key === 'Home') {
+          e.preventDefault()
+          newPercent = 0
+        } else if (e.key === 'End') {
+          e.preventDefault()
+          newPercent = 1
+        } else {
+          return
+        }
+        
+        onSeek(newPercent * effectiveDuration)
+      }}
     >
       <canvas
         ref={canvasRef}

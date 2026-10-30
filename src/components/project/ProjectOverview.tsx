@@ -252,7 +252,7 @@ export default function ProjectOverview({ project }: { project: Project }) {
                 {/* Discreet back button - just icon */}
                 <button
                   onClick={isTrackView ? handleBackToAlbum : handleBackToAlbums}
-                  className="w-8 h-8 rounded-lg bg-neutral-900/30 border border-neutral-700/30 flex items-center justify-center text-neutral-400 hover:text-white hover:bg-neutral-900/50 hover:border-neutral-600/50 transition-all duration-200 flex-shrink-0"
+                  className="w-8 h-8 rounded-lg bg-neutral-900/30 border border-neutral-700/30 flex items-center justify-center text-neutral-400 hover:text-white hover:bg-neutral-900/50 hover:border-neutral-600/50 trans-all focus-ring flex-shrink-0"
                   title="Voltar"
                 >
                   <ChevronLeft className="w-5 h-5" />
@@ -278,10 +278,10 @@ export default function ProjectOverview({ project }: { project: Project }) {
                       filters: [{ name: 'Imagens', extensions: ['jpg', 'jpeg', 'png', 'webp', 'gif'] }],
                       multiple: false,
                     }).then(r => r?.[0] && selectedAlbum && updateAlbum(project.id, selectedAlbum.id, { coverPath: r[0] }))}
-                    className="absolute inset-0 bg-black/0 hover:bg-black/30 transition-colors flex items-center justify-center"
+                    className="absolute inset-0 bg-black/0 hover:bg-black/30 trans-colors flex items-center justify-center focus-ring"
                     title="Trocar capa"
                   >
-                    <ImageIcon className="w-4 h-4 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <ImageIcon className="w-4 h-4 text-white opacity-0 group-hover:opacity-100 trans-opacity" />
                   </button>
                 </div>
 
@@ -332,7 +332,7 @@ export default function ProjectOverview({ project }: { project: Project }) {
                 placeholder={isAlbumView ? "Buscar faixas..." : "Buscar álbuns..."}
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                className="w-64 sm:w-72 bg-neutral-900 border border-neutral-700 rounded-lg pl-10 pr-4 py-2 text-sm text-white placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-white/30"
+                className="w-64 sm:w-72 bg-neutral-900 border border-neutral-700 rounded-lg pl-10 pr-4 py-2 text-sm text-white placeholder:text-neutral-500 focus-ring"
               />
             </div>
 
@@ -342,7 +342,7 @@ export default function ProjectOverview({ project }: { project: Project }) {
                 <select
                   value={filterType}
                   onChange={e => setFilterType(e.target.value as any)}
-                  className="bg-neutral-900 border border-neutral-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-white/20 appearance-none pr-8"
+                  className="bg-neutral-900 border border-neutral-700 rounded-lg px-3 py-2 text-sm text-white focus-ring appearance-none pr-8"
                 >
                   <option value="all">Todos</option>
                   <option value="album">Álbum</option>
@@ -358,14 +358,20 @@ export default function ProjectOverview({ project }: { project: Project }) {
             <div className="flex bg-neutral-900 border border-neutral-700 rounded-lg overflow-hidden hidden sm:flex">
               <button
                 onClick={() => isAlbumView ? setTrackViewMode('grid') : setViewMode('grid')}
-                className={cn("p-2 transition-colors", (isAlbumView ? trackViewMode : viewMode) === 'grid' ? 'bg-white/10 text-white' : 'text-neutral-400 hover:text-white')}
+                className={cn(
+                  "p-2 trans-colors focus-ring",
+                  (isAlbumView ? trackViewMode : viewMode) === 'grid' ? 'bg-white/10 text-white' : 'text-neutral-400 hover:text-white'
+                )}
                 title={isAlbumView ? "Grade (faixas)" : "Grade (álbuns)"}
               >
                 <Grid className="w-5 h-5" />
               </button>
               <button
                 onClick={() => isAlbumView ? setTrackViewMode('list') : setViewMode('list')}
-                className={cn("p-2 transition-colors", (isAlbumView ? trackViewMode : viewMode) === 'list' ? 'bg-white/10 text-white' : 'text-neutral-400 hover:text-white')}
+                className={cn(
+                  "p-2 trans-colors focus-ring",
+                  (isAlbumView ? trackViewMode : viewMode) === 'list' ? 'bg-white/10 text-white' : 'text-neutral-400 hover:text-white'
+                )}
                 title={isAlbumView ? "Lista (faixas)" : "Lista (álbuns)"}
               >
                 <List className="w-5 h-5" />
@@ -895,7 +901,7 @@ function AlbumListItem({ album, projectColor, onClick }: {
         onContextMenu={handleContextMenu}
         className={cn(
           "w-full flex items-center gap-4 p-3 rounded-lg bg-neutral-900/50 border border-neutral-800",
-          "hover:border-neutral-700 hover:bg-neutral-900 transition-all text-left"
+          "hover:border-neutral-700 hover:bg-neutral-900 trans-all text-left focus-ring"
         )}
       >
         <div className="w-14 h-14 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden"
@@ -1017,7 +1023,7 @@ function Tracklist({ tracks, projectColor, onOpenTrack, onEdit, onDelete, onDrop
       </p>
       <div className="flex items-center justify-center gap-2">
         <button
-          className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-sm font-medium transition-colors"
+          className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-sm font-medium trans-colors focus-ring"
           onClick={handleAddFiles}
         >
           Selecionar arquivos
