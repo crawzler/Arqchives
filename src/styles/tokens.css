@@ -1,0 +1,450 @@
+/**
+ * Arqchives Design Tokens
+ * Single source of truth for all visual design decisions.
+ * Import this in globals.css to enable the token system.
+ */
+
+/* ==========================================================================
+   COLOR PALETTE — Semantic aliases over base palette
+   ========================================================================== */
+
+@layer base {
+  :root {
+    /* --- Base palette (from shadcn/ui) --- */
+    --color-neutral-50:  0 0% 98%;
+    --color-neutral-100: 0 0% 96%;
+    --color-neutral-200: 0 0% 90%;
+    --color-neutral-300: 0 0% 82%;
+    --color-neutral-400: 0 0% 63.9%;
+    --color-neutral-500: 0 0% 45%;
+    --color-neutral-600: 0 0% 30%;
+    --color-neutral-700: 0 0% 20%;
+    --color-neutral-800: 0 0% 12%;
+    --color-neutral-900: 0 0% 6%;
+    --color-neutral-950: 0 0% 3%;
+
+    /* --- Semantic colors (what components actually use) --- */
+    /* Backgrounds */
+    --color-bg-base:         var(--color-neutral-950);
+    --color-bg-elevated:     var(--color-neutral-900);
+    --color-bg-overlay:      var(--color-neutral-900);
+    --color-bg-hover:        var(--color-neutral-800);
+    --color-bg-active:       var(--color-neutral-700);
+    --color-bg-subtle:       var(--color-neutral-900 / 0.5);
+    --color-bg-glass:        var(--color-neutral-900 / 0.7);
+
+    /* Borders */
+    --color-border-subtle:   var(--color-neutral-800);
+    --color-border-default:  var(--color-neutral-700);
+    --color-border-strong:   var(--color-neutral-600);
+    --color-border-focus:    hsl(var(--ring));
+
+    /* Text */
+    --color-text-primary:    hsl(var(--foreground));
+    --color-text-secondary:  hsl(var(--muted-foreground));
+    --color-text-muted:      hsl(var(--muted-foreground) / 0.7);
+    --color-text-inverse:    hsl(var(--primary-foreground));
+    --color-text-disabled:   hsl(var(--muted-foreground) / 0.5);
+
+    /* Interactive */
+    --color-interactive-bg:        hsl(var(--secondary));
+    --color-interactive-bg-hover:  hsl(var(--accent));
+    --color-interactive-border:    var(--color-border-default);
+    --color-interactive-border-hover: var(--color-border-strong);
+
+    /* Status colors (semantic, not literal) */
+    --color-status-completed:   142 76% 36%;  /* emerald-600 */
+    --color-status-in_progress: 221 83% 53%;  /* blue-500 */
+    --color-status-planned:     262 83% 58%;  /* violet-500 */
+    --color-status-missing:     0 84% 60%;    /* red-500 */
+    --color-status-skipped:     45 93% 58%;   /* amber-500 */
+    --color-status-idea:        199 89% 48%;  /* sky-500 */
+
+    /* Album type colors */
+    --color-type-album:       221 83% 53%;   /* blue */
+    --color-type-ep:          142 76% 36%;   /* emerald */
+    --color-type-single:      262 83% 58%;   /* violet */
+    --color-type-compilation: 45 93% 58%;    /* amber */
+
+    /* Folder icon colors (mapped to semantic purpose) */
+    --color-folder-artwork:       330 81% 60%;  /* pink */
+    --color-folder-masters:       142 76% 36%;  /* emerald */
+    --color-folder-extras:        45 93% 58%;   /* amber */
+    --color-folder-audio:         221 83% 53%;  /* blue */
+    --color-folder-stems:         262 83% 58%;  /* purple */
+    --color-folder-projects:      24 95% 53%;   /* orange */
+    --color-folder-lyrics:        142 76% 36%;  /* green */
+    --color-folder-videos:        0 84% 60%;    /* red */
+    --color-folder-references:    189 94% 43%;  /* cyan */
+
+    /* Project color opacity tokens (replaces arbitrary '10', '30', '40') */
+    --project-color-subtle:    0.08;   /* ~10% - for folder icons backgrounds */
+    --project-color-muted:     0.20;   /* ~20% - for hover states */
+    --color-project-emphasis:  0.30;   /* ~30% - for borders, active states */
+    --project-color-strong:    0.40;   /* ~40% - for card borders */
+
+    /* Player specific */
+    --color-player-bg:         var(--color-neutral-950);
+    --color-player-border:     var(--color-border-subtle);
+    --color-waveform-bg:       transparent;
+    --color-waveform-progress: hsl(var(--primary));
+    --color-waveform-track:    var(--color-neutral-700);
+  }
+}
+
+/* ==========================================================================
+   SPACING SCALE — 4px base unit
+   ========================================================================== */
+
+@layer base {
+  :root {
+    --space-0: 0;
+    --space-1: 0.25rem;   /* 4px */
+    --space-2: 0.5rem;    /* 8px */
+    --space-3: 0.75rem;   /* 12px */
+    --space-4: 1rem;      /* 16px */
+    --space-5: 1.25rem;   /* 20px */
+    --space-6: 1.5rem;    /* 24px */
+    --space-8: 2rem;      /* 32px */
+    --space-10: 2.5rem;   /* 40px */
+    --space-12: 3rem;     /* 48px */
+    --space-16: 4rem;     /* 64px */
+
+    /* Semantic spacing aliases */
+    --gap-xs: var(--space-1);    /* 4px  - tight inline gaps */
+    --gap-sm: var(--space-2);    /* 8px  - default inline gap */
+    --gap-md: var(--space-3);    /* 12px - component internal gap */
+    --gap-lg: var(--space-4);    /* 16px - section gap */
+    --gap-xl: var(--space-6);    /* 24px - major section gap */
+
+    --pad-xs: var(--space-1);    /* 4px  - micro padding */
+    --pad-sm: var(--space-2);    /* 8px  - compact padding */
+    --pad-md: var(--space-3);    /* 12px - default component padding */
+    --pad-lg: var(--space-4);    /* 16px - card/panel padding */
+    --pad-xl: var(--space-6);    /* 24px - page/section padding */
+
+    /* Row heights (for lists, tables, track rows) */
+    --row-height-xs: 2rem;      /* 32px - very compact */
+    --row-height-sm: 2.5rem;    /* 40px - compact (TrackRow) */
+    --row-height-md: 3rem;      /* 48px - standard */
+    --row-height-lg: 3.5rem;    /* 56px - comfortable */
+    --row-height-xl: 4rem;      /* 64px - spacious */
+
+    /* Container max widths */
+    --container-sm:  640px;
+    --container-md:  768px;
+    --container-lg:  1024px;
+    --container-xl:  1280px;
+    --container-2xl: 1536px;
+  }
+}
+
+/* ==========================================================================
+   BORDER RADIUS — Semantic scale
+   ========================================================================== */
+
+@layer base {
+  :root {
+    --radius-none: 0;
+    --radius-xs:   0.125rem;  /* 2px - tiny elements */
+    --radius-sm:   0.25rem;   /* 4px - badges, pills, small buttons */
+    --radius-md:   0.375rem;  /* 6px - inputs, dropdowns, context menus */
+    --radius-lg:   0.5rem;    /* 8px - buttons, cards, panels (DEFAULT) */
+    --radius-xl:   0.75rem;   /* 12px - primary cards, modals */
+    --radius-2xl:  1rem;      /* 16px - large modals, hero cards */
+    --radius-full: 9999px;    /* pills, avatars, play button */
+  }
+}
+
+/* ==========================================================================
+   TYPOGRAPHY — Fluid scale with semantic aliases
+   ========================================================================== */
+
+@layer base {
+  :root {
+    /* Font families */
+    --font-sans:     'Inter', ui-sans-serif, system-ui, sans-serif;
+    --font-mono:     'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+    --font-display:  'Inter', ui-sans-serif, system-ui, sans-serif;
+
+    /* Font sizes (clamp for fluid scaling) */
+    --text-xs:    0.75rem;    /* 12px */
+    --text-sm:    0.875rem;   /* 14px */
+    --text-base:  1rem;       /* 16px */
+    --text-lg:    1.125rem;   /* 18px */
+    --text-xl:    1.25rem;    /* 20px */
+    --text-2xl:   1.5rem;     /* 24px */
+    --text-3xl:   1.875rem;   /* 30px */
+    --text-4xl:   2.25rem;    /* 36px */
+
+    /* Semantic text size aliases */
+    --text-caption:   var(--text-xs);      /* 12px - metadata, labels */
+    --text-body-sm:   var(--text-sm);      /* 14px - secondary text */
+    --text-body:      var(--text-base);    /* 16px - primary body */
+    --text-body-lg:   var(--text-lg);      /* 18px - emphasized body */
+    --text-heading-sm: var(--text-lg);     /* 18px - small headings */
+    --text-heading:   var(--text-xl);      /* 20px - default heading */
+    --text-heading-lg: var(--text-2xl);    /* 24px - page titles */
+    --text-display:   var(--text-3xl);     /* 30px - hero */
+
+    /* Font weights */
+    --font-normal:   400;
+    --font-medium:   500;
+    --font-semibold: 600;
+    --font-bold:     700;
+
+    /* Line heights */
+    --leading-tight:   1.25;
+    --leading-snug:    1.375;
+    --leading-normal:  1.5;
+    --leading-relaxed: 1.625;
+
+    /* Letter spacing */
+    --tracking-tight:  -0.02em;
+    --tracking-normal: 0;
+    --tracking-wide:   0.02em;
+    --tracking-wider:  0.04em;
+  }
+}
+
+/* ==========================================================================
+   SHADOWS & ELEVATION
+   ========================================================================== */
+
+@layer base {
+  :root {
+    --shadow-xs:   0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow-sm:   0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+    --shadow-md:   0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --shadow-lg:   0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    --shadow-xl:   0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+    --shadow-2xl:  0 25px 50px -12px rgb(0 0 0 / 0.25);
+
+    /* Semantic elevation */
+    --elevation-0: none;
+    --elevation-1: var(--shadow-sm);   /* cards, dropdowns */
+    --elevation-2: var(--shadow-md);   /* raised cards, modals */
+    --elevation-3: var(--shadow-lg);   /* floating panels */
+    --elevation-4: var(--shadow-xl);   /* modals, drawers */
+    --elevation-5: var(--shadow-2xl);  /* toast, dropdown menus */
+  }
+}
+
+/* ==========================================================================
+   TRANSITIONS & MOTION
+   ========================================================================== */
+
+@layer base {
+  :root {
+    /* Durations */
+    --duration-instant: 0ms;
+    --duration-fast:    100ms;
+    --duration-normal:  150ms;
+    --duration-slow:    200ms;
+    --duration-slower:  300ms;
+
+    /* Easings */
+    --ease-linear:     linear;
+    --ease-in:         cubic-bezier(0.4, 0, 1, 1);
+    --ease-out:        cubic-bezier(0, 0, 0.2, 1);
+    --ease-in-out:     cubic-bezier(0.4, 0, 0.2, 1);
+    --ease-spring:     cubic-bezier(0.34, 1.56, 0.64, 1);
+    --ease-bounce:     cubic-bezier(0.68, -0.55, 0.265, 1.55);
+
+    /* Semantic transitions */
+    --transition-colors:    color var(--duration-fast) var(--ease-out),
+                            background-color var(--duration-fast) var(--ease-out),
+                            border-color var(--duration-fast) var(--ease-out);
+    --transition-transform: transform var(--duration-normal) var(--ease-out);
+    --transition-opacity:   opacity var(--duration-fast) var(--ease-out);
+    --transition-all:       all var(--duration-normal) var(--ease-out);
+    --transition-shadow:    box-shadow var(--duration-normal) var(--ease-out);
+  }
+}
+
+/* ==========================================================================
+   Z-INDEX SCALE
+   ========================================================================== */
+
+@layer base {
+  :root {
+    --z-hide:      -1;
+    --z-base:      0;
+    --z-dropdown:  100;
+    --z-sticky:    200;
+    --z-fixed:     300;
+    --z-modal-backdrop: 400;
+    --z-modal:     500;
+    --z-popover:   600;
+    --z-tooltip:   700;
+    --z-toast:     800;
+  }
+}
+
+/* ==========================================================================
+   BREAKPOINTS (mirror Tailwind for reference)
+   ========================================================================== */
+
+@layer base {
+  :root {
+    --bp-sm:  640px;
+    --bp-md:  768px;
+    --bp-lg:  1024px;
+    --bp-xl:  1280px;
+    --bp-2xl: 1536px;
+  }
+}
+
+/* ==========================================================================
+   COMPONENT-SPECIFIC TOKENS (composed from primitives above)
+   ========================================================================== */
+
+@layer base {
+  :root {
+    /* --- Button --- */
+    --btn-height-sm:      2rem;      /* 32px */
+    --btn-height-md:      2.5rem;    /* 40px */
+    --btn-height-lg:      3rem;      /* 48px */
+    --btn-height-icon:    2.5rem;    /* 40px square */
+    --btn-padding-x-sm:   var(--space-2);   /* 8px */
+    --btn-padding-x-md:   var(--space-3);   /* 12px */
+    --btn-padding-x-lg:   var(--space-4);   /* 16px */
+    --btn-radius:         var(--radius-lg); /* 8px */
+
+    /* --- Input --- */
+    --input-height:       var(--btn-height-md);  /* 40px - aligns with button */
+    --input-padding-x:    var(--space-3);        /* 12px */
+    --input-radius:       var(--radius-md);      /* 6px - slightly smaller than btn */
+
+    /* --- Card --- */
+    --card-radius:        var(--radius-xl);      /* 12px */
+    --card-padding:       var(--pad-lg);         /* 16px */
+    --card-gap:           var(--gap-md);         /* 12px */
+
+    /* --- Modal --- */
+    --modal-radius:       var(--radius-2xl);     /* 16px */
+    --modal-padding:      var(--pad-xl);         /* 24px */
+    --modal-header-gap:   var(--gap-lg);         /* 16px */
+    --modal-footer-gap:   var(--gap-md);         /* 12px */
+
+    /* --- Sidebar --- */
+    --sidebar-width:      18rem;     /* 288px (w-72) */
+    --sidebar-collapsed:  4rem;      /* 64px (w-16) */
+    --sidebar-item-height: var(--row-height-sm); /* 40px */
+    --sidebar-indent:     1rem;      /* 16px per level */
+
+    /* --- Player --- */
+    --player-height:          6rem;     /* 96px */
+    --player-height-expanded: 8rem;     /* 128px */
+    --player-radius:          var(--radius-xl);
+    --waveform-height:        5rem;     /* 80px */
+    --waveform-height-sm:     3rem;     /* 48px */
+    --volume-slider-width:    6rem;     /* 96px */
+    --play-btn-size:          3rem;     /* 48px */
+
+    /* --- Context Menu --- */
+    --menu-min-width:     12rem;   /* 192px */
+    --menu-item-height:   2rem;    /* 32px */
+    --menu-radius:        var(--radius-md);
+    --menu-shadow:        var(--elevation-4);
+    --menu-border:        var(--color-border-default);
+
+    /* --- Scrollbar --- */
+    --scrollbar-width:    6px;
+    --scrollbar-thumb-bg: hsl(var(--muted) / 0.5);
+    --scrollbar-thumb-hover: hsl(var(--muted-foreground) / 0.5);
+    --scrollbar-radius:   3px;
+
+    /* --- Divider --- */
+    --divider-color:      var(--color-border-subtle);
+    --divider-weight:     1px;
+  }
+}
+
+/* ==========================================================================
+   UTILITY CLASSES — For gradual migration (opt-in)
+   ========================================================================== */
+
+@layer utilities {
+  /* Spacing */
+  .gap-xs { gap: var(--gap-xs); }
+  .gap-sm { gap: var(--gap-sm); }
+  .gap-md { gap: var(--gap-md); }
+  .gap-lg { gap: var(--gap-lg); }
+  .gap-xl { gap: var(--gap-xl); }
+
+  .pad-xs { padding: var(--pad-xs); }
+  .pad-sm { padding: var(--pad-sm); }
+  .pad-md { padding: var(--pad-md); }
+  .pad-lg { padding: var(--pad-lg); }
+  .pad-xl { padding: var(--pad-xl); }
+
+  .px-xs { padding-inline: var(--pad-xs); }
+  .px-sm { padding-inline: var(--pad-sm); }
+  .px-md { padding-inline: var(--pad-md); }
+  .px-lg { padding-inline: var(--pad-lg); }
+  .px-xl { padding-inline: var(--pad-xl); }
+
+  .py-xs { padding-block: var(--pad-xs); }
+  .py-sm { padding-block: var(--pad-sm); }
+  .py-md { padding-block: var(--pad-md); }
+  .py-lg { padding-block: var(--pad-lg); }
+  .py-xl { padding-block: var(--pad-xl); }
+
+  /* Radius */
+  .radius-xs { border-radius: var(--radius-xs); }
+  .radius-sm { border-radius: var(--radius-sm); }
+  .radius-md { border-radius: var(--radius-md); }
+  .radius-lg { border-radius: var(--radius-lg); }
+  .radius-xl { border-radius: var(--radius-xl); }
+  .radius-2xl { border-radius: var(--radius-2xl); }
+  .radius-full { border-radius: var(--radius-full); }
+
+  /* Text */
+  .text-caption { font-size: var(--text-caption); line-height: var(--leading-normal); }
+  .text-body-sm { font-size: var(--text-body-sm); line-height: var(--leading-normal); }
+  .text-body { font-size: var(--text-body); line-height: var(--leading-normal); }
+  .text-body-lg { font-size: var(--text-body-lg); line-height: var(--leading-relaxed); }
+  .text-heading-sm { font-size: var(--text-heading-sm); font-weight: var(--font-semibold); line-height: var(--leading-tight); }
+  .text-heading { font-size: var(--text-heading); font-weight: var(--font-semibold); line-height: var(--leading-tight); }
+  .text-heading-lg { font-size: var(--text-heading-lg); font-weight: var(--font-semibold); line-height: var(--leading-tight); }
+  .text-display { font-size: var(--text-display); font-weight: var(--font-bold); line-height: var(--leading-tight); }
+
+  /* Row heights */
+  .h-row-xs { height: var(--row-height-xs); min-height: var(--row-height-xs); }
+  .h-row-sm { height: var(--row-height-sm); min-height: var(--row-height-sm); }
+  .h-row-md { height: var(--row-height-md); min-height: var(--row-height-md); }
+  .h-row-lg { height: var(--row-height-lg); min-height: var(--row-height-lg); }
+  .h-row-xl { height: var(--row-height-xl); min-height: var(--row-height-xl); }
+
+  /* Colors */
+  .bg-base { background-color: hsl(var(--color-bg-base)); }
+  .bg-elevated { background-color: hsl(var(--color-bg-elevated)); }
+  .bg-overlay { background-color: hsl(var(--color-bg-overlay)); }
+  .bg-hover { background-color: hsl(var(--color-bg-hover)); }
+  .bg-subtle { background-color: hsl(var(--color-bg-subtle)); }
+  .bg-glass { background-color: hsl(var(--color-bg-glass)); }
+
+  .border-subtle { border-color: hsl(var(--color-border-subtle)); }
+  .border-default { border-color: hsl(var(--color-border-default)); }
+  .border-strong { border-color: hsl(var(--color-border-strong)); }
+
+  .text-primary { color: hsl(var(--color-text-primary)); }
+  .text-secondary { color: hsl(var(--color-text-secondary)); }
+  .text-muted { color: hsl(var(--color-text-muted)); }
+  .text-disabled { color: hsl(var(--color-text-disabled)); }
+
+  /* Shadows */
+  .shadow-elev-1 { box-shadow: var(--elevation-1); }
+  .shadow-elev-2 { box-shadow: var(--elevation-2); }
+  .shadow-elev-3 { box-shadow: var(--elevation-3); }
+  .shadow-elev-4 { box-shadow: var(--elevation-4); }
+  .shadow-elev-5 { box-shadow: var(--elevation-5); }
+
+  /* Transitions */
+  .trans-colors { transition: var(--transition-colors); }
+  .trans-transform { transition: var(--transition-transform); }
+  .trans-opacity { transition: var(--transition-opacity); }
+  .trans-all { transition: var(--transition-all); }
+  .trans-shadow { transition: var(--transition-shadow); }
+}
