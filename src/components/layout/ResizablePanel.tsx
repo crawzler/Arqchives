@@ -105,7 +105,7 @@ export function ResizablePanel({
     <div
       ref={panelRef}
       className={cn(
-        'fixed top-[68px] h-[calc(100vh-68px)] flex flex-col transition-all duration-200 z-40',
+        'fixed top-[68px] h-[calc(100vh-68px)] flex flex-col trans-all z-fixed',
         position === 'left'
           ? 'left-0'
           : 'right-0',
@@ -121,9 +121,9 @@ export function ResizablePanel({
           ref={handleRef}
           onMouseDown={handleMouseDown}
           className={cn(
-            'absolute top-0 bottom-0 w-1 flex items-center justify-center transition-colors select-none',
-            'hover:bg-neutral-800 hover:w-1.5',
-            isResizing && 'bg-neutral-600 w-1.5',
+            'absolute top-0 bottom-0 w-[4px] flex items-center justify-center trans-colors select-none',
+            'hover:bg-default hover:w-[6px]',
+            isResizing && 'bg-muted/50 w-[6px]',
             position === 'left' ? 'right-0 cursor-ew-resize' : 'left-0 cursor-ew-resize',
             collapsed && 'opacity-0 pointer-events-none'
           )}
@@ -145,7 +145,7 @@ export function ResizablePanel({
           }}
         >
           {!collapsed && (
-            <GripVertical className="w-3 h-6 text-neutral-500 hover:text-white transition-colors opacity-50 hover:opacity-100" />
+            <GripVertical className="w-3 h-6 text-muted hover:text-primary trans-colors opacity-50 hover:opacity-100" />
           )}
         </div>
       )}
@@ -155,10 +155,10 @@ export function ResizablePanel({
         <button
           onClick={handleCollapseClick}
           className={cn(
-            'absolute top-2 z-50 w-8 h-8 rounded-lg bg-neutral-900 border border-neutral-800 flex items-center justify-center text-neutral-400 hover:text-white hover:bg-neutral-800 transition-all',
+            'absolute top-sm z-modal w-8 h-8 radius-lg bg-base border border-subtle flex items-center justify-center text-muted hover:text-primary hover:bg-hover trans-all',
             position === 'left'
-              ? 'right-2'
-              : 'left-2'
+              ? 'right-sm'
+              : 'left-sm'
           )}
           aria-label={collapseAriaLabel || 'Colapsar painel'}
           aria-expanded="true"
@@ -175,10 +175,10 @@ export function ResizablePanel({
         <button
           onClick={handleCollapseClick}
           className={cn(
-            'absolute top-2 z-50 w-8 h-8 rounded-lg bg-neutral-900 border border-neutral-800 flex items-center justify-center text-neutral-400 hover:text-white hover:bg-neutral-800 transition-all',
+            'absolute top-sm z-modal w-8 h-8 radius-lg bg-base border border-subtle flex items-center justify-center text-muted hover:text-primary hover:bg-hover trans-all',
             position === 'left'
-              ? 'left-2'
-              : 'right-2'
+              ? 'left-sm'
+              : 'right-sm'
           )}
           aria-label={expandAriaLabel || 'Expandir painel'}
           aria-expanded="false"
@@ -193,7 +193,7 @@ export function ResizablePanel({
 
       {/* Panel Content */}
       <div className={cn(
-        'flex-1 overflow-hidden flex flex-col transition-opacity duration-200',
+        'flex-1 overflow-hidden flex flex-col trans-opacity',
         collapsed && 'opacity-0 pointer-events-none'
       )}>
         {children}
