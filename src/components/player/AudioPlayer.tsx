@@ -50,7 +50,7 @@ export function AudioPlayer({ src, onEnded, className, onPlaylistPlay, isPlaying
   /*
   const _normalizeSrc = useCallback((s: string) => s.replace(/%20/g, ' '), [])
   // Normalize src for comparison (handle %20 encoding differences) - FIXED: no double-encoding
-*/
+  */
 
   // Dispatch global events for sync with TrackPlayer
   const dispatchGlobalEvent = useCallback((eventName: string, detail: any) => {
@@ -292,33 +292,33 @@ export function AudioPlayer({ src, onEnded, className, onPlaylistPlay, isPlaying
   }
 
   return (
-    <div className={cn("bg-neutral-950 border-t border-neutral-800", className)}>
+    <div className={cn("bg-base border-t border-subtle", className)}>
       <audio ref={audioRef} preload="metadata" />
 
       {/* Top row: Track info + Controls + Volume */}
-      <div className="flex items-center justify-between gap-4 px-4 py-3 relative">
+      <div className="flex items-center justify-between gap-md px-lg py-sm relative">
         {/* Track info - Left */}
-        <div className="flex items-center gap-2 min-w-0 flex-1 pr-4">
+        <div className="flex items-center gap-sm min-w-0 flex-1 pr-md">
           {trackInfo && (
-            <div className="flex items-center gap-2 min-w-0">
+            <div className="flex items-center gap-sm min-w-0">
               {currentTrack?.album?.coverPath ? (
                 <img
                   src={currentTrack.album.coverPath.startsWith('data:') ? currentTrack.album.coverPath : currentTrack.album.coverPath}
                   alt=""
-                  className="w-6 h-6 rounded object-cover flex-shrink-0"
+                  className="w-6 h-6 radius object-cover flex-shrink-0"
                 />
               ) : (
-                <div className="w-6 h-6 rounded bg-neutral-800 flex items-center justify-center flex-shrink-0">
-                  <Music className="w-3 h-3 text-neutral-500" />
+                <div className="w-6 h-6 radius bg-hover flex items-center justify-center flex-shrink-0">
+                  <Music className="w-3 h-3 text-muted" />
                 </div>
               )}
               <div className="min-w-0">
-                <p className="font-medium text-white truncate text-sm flex items-center gap-1">
-                  <span className="text-neutral-400 text-xs">{currentIndex + 1}.</span>
+                <p className="font-medium text-primary truncate text-body-sm flex items-center gap-xs">
+                  <span className="text-muted text-caption">{currentIndex + 1}.</span>
                   {trackInfo.title}
                 </p>
                 {currentTrack?.album && (
-                  <p className="text-[11px] text-neutral-500 truncate flex items-center gap-1">
+                  <p className="text-[11px] text-muted truncate flex items-center gap-xs">
                     {currentTrack.album.title}
                   </p>
                 )}
@@ -328,11 +328,11 @@ export function AudioPlayer({ src, onEnded, className, onPlaylistPlay, isPlaying
         </div>
 
         {/* Transport Controls - Centered absolutely */}
-        <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2">
+        <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-sm">
           {/* Skip Back - 15s */}
           <button
             onClick={() => skip(-15)}
-            className="w-8 h-8 rounded-full text-neutral-400 hover:text-white hover:bg-neutral-800 flex items-center justify-center transition-colors"
+            className="w-8 h-8 radius-full text-muted hover:text-primary hover:bg-hover flex items-center justify-center trans-colors"
             title="Retroceder 15s"
           >
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -344,7 +344,7 @@ export function AudioPlayer({ src, onEnded, className, onPlaylistPlay, isPlaying
           {/* Play/Pause - Main button with project color */}
           <button
             onClick={togglePlay}
-            className="relative w-10 h-10 rounded-full flex items-center justify-center text-black transition-colors shadow-lg"
+            className="relative w-10 h-10 radius-full flex items-center justify-center text-black trans-colors shadow-elev-3"
             style={{
               backgroundColor: projectColor,
               boxShadow: `0 0 20px ${projectColor}CC`
@@ -357,7 +357,7 @@ export function AudioPlayer({ src, onEnded, className, onPlaylistPlay, isPlaying
           {/* Skip Forward - 15s */}
           <button
             onClick={() => skip(15)}
-            className="w-8 h-8 rounded-full text-neutral-400 hover:text-white hover:bg-neutral-800 flex items-center justify-center transition-colors"
+            className="w-8 h-8 radius-full text-muted hover:text-primary hover:bg-hover flex items-center justify-center trans-colors"
             title="Avançar 15s"
           >
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -368,27 +368,27 @@ export function AudioPlayer({ src, onEnded, className, onPlaylistPlay, isPlaying
         </div>
 
         {/* Right Controls: Repeat + Volume */}
-        <div className="flex items-center gap-2 flex-shrink-0">
+        <div className="flex items-center gap-sm flex-shrink-0">
           {/* Repeat */}
           <button
             onClick={() => setLoop(!loop)}
-            className={cn("w-8 h-8 rounded-full flex items-center justify-center text-white transition-colors", loop && "bg-neutral-800")}
+            className={cn("w-8 h-8 radius-full flex items-center justify-center text-primary trans-colors", loop && "bg-hover")}
             title="Repetir"
           >
             <Repeat className="w-3.5 h-3.5" />
           </button>
 
           {/* Volume */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-sm">
             <button
               onClick={() => { const a = audioRef.current; if (a) { a.muted = !a.muted; setVolume(a.muted ? 0 : a.volume || 1) } }}
-              className="w-8 h-8 flex items-center justify-center text-neutral-400 hover:text-white transition-colors"
+              className="w-8 h-8 flex items-center justify-center text-muted hover:text-primary trans-colors"
               aria-label={volume === 0 ? 'Ativar som' : 'Mutar'}
             >
               {volume === 0 ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
             </button>
             <div
-              className="relative w-24 h-3 bg-neutral-800 cursor-pointer overflow-hidden volume-drag-bar"
+              className="relative w-24 h-3 bg-hover cursor-pointer overflow-hidden volume-drag-bar"
               onClick={handleVolumeClick}
               onMouseDown={(e) => {
                 e.preventDefault()
@@ -420,13 +420,13 @@ export function AudioPlayer({ src, onEnded, className, onPlaylistPlay, isPlaying
       </div>
 
       {/* Waveform Timeline */}
-      <div className="px-4 pb-3">
+      <div className="px-lg pb-sm">
         <Waveform
           audioPath={src}
           currentTime={currentTime}
           duration={duration}
           color={projectColor}
-          height={50}
+          height={48}
           onSeek={handleSeek}
           isPlaying={isPlaying}
           onReady={() => setWaveformReady(true)}
