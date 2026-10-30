@@ -118,34 +118,34 @@ export function TrackModal({ track, projectColor, onSave, onClose }: TrackModalP
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+      className="fixed inset-0 z-modal flex items-center justify-center bg-black/60 backdrop-blur-sm pad-lg"
       onClick={onClose}
     >
       <motion.div
         initial={{ scale: 0.95, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.95, opacity: 0 }}
-        className="bg-neutral-900 border border-neutral-700 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col"
+        className="bg-elevated border border-default radius-2xl shadow-elev-5 w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col"
         onClick={e => e.stopPropagation()}
         ref={modalRef}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-neutral-800">
-          <h2 className="text-lg font-semibold">{track ? 'Editar Música' : 'Nova Música'}</h2>
-          <button onClick={onClose} className="w-8 h-8 rounded-lg hover:bg-white/10 flex items-center justify-center text-neutral-400 hover:text-white"><X className="w-4 h-4" /></button>
+        <div className="flex items-center justify-between pad-lg border-b border-subtle">
+          <h2 className="text-heading-sm font-semibold">{track ? 'Editar Música' : 'Nova Música'}</h2>
+          <button onClick={onClose} className="w-8 h-8 radius-lg hover:bg-hover flex items-center justify-center text-muted hover:text-primary trans-colors"><X className="w-4 h-4" /></button>
         </div>
 
         {/* Section Tabs */}
-        <div className="flex border-b border-neutral-800 px-4 bg-neutral-950/50">
+        <div className="flex border-b border-subtle px-lg bg-base/50">
           {sections.map((section, index) => (
             <button
               key={section.id}
               onClick={() => setActiveSection(section.id as 'main' | 'ai')}
               className={cn(
-                "flex items-center gap-2 px-4 py-3 text-sm font-medium transition-all duration-200 relative",
+                "flex items-center gap-sm px-lg py-md text-body-sm font-medium trans-all relative",
                 activeSection === section.id
-                  ? "text-white"
-                  : "text-neutral-400 hover:text-white"
+                  ? "text-primary"
+                  : "text-muted hover:text-primary"
               )}
               style={{
                 borderBottom: activeSection === section.id ? `2px solid ${projectColor}` : '2px solid transparent',
@@ -157,24 +157,24 @@ export function TrackModal({ track, projectColor, onSave, onClose }: TrackModalP
           ))}
         </div>
 
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 space-y-4">
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto pad-lg gap-lg">
           {/* MAIN SECTION */}
           {activeSection === 'main' && (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="space-y-4"
+              className="gap-lg"
             >
               {/* Audio File */}
-              <div className="space-y-2">
-                <label className="text-xs font-medium text-neutral-300 flex items-center gap-2"><Music2 className="w-3.5 h-3.5" /> Arquivo de Áudio</label>
+              <div className="gap-sm">
+                <label className="text-caption font-medium text-secondary flex items-center gap-xs"><Music2 className="w-3.5 h-3.5" /> Arquivo de Áudio</label>
                 {audioName ? (
-                  <div className="flex items-center justify-between p-3 bg-neutral-800 border border-neutral-700 rounded-xl">
-                    <div className="flex items-center gap-2">
-                      <Music2 className="w-5 h-5 text-emerald-400" />
-                      <span className="text-sm text-white truncate max-w-[200px]">{audioName}</span>
+                  <div className="flex items-center justify-between pad-md bg-hover border border-default radius-xl">
+                    <div className="flex items-center gap-sm">
+                      <Music2 className="w-5 h-5" style={{ color: 'hsl(var(--color-status-completed))' }} />
+                      <span className="text-body-sm text-primary truncate max-w-[200px]">{audioName}</span>
                     </div>
-                    <button type="button" onClick={clearAudio} className="w-8 h-8 rounded-lg hover:bg-red-600/20 flex items-center justify-center text-neutral-400 hover:text-red-400 transition-colors">
+                    <button type="button" onClick={clearAudio} className="w-8 h-8 radius-lg hover:bg-red-600/20 flex items-center justify-center text-muted hover:text-red-400 trans-colors">
                       <X className="w-3.5 h-3.5" />
                     </button>
                   </div>
@@ -182,7 +182,7 @@ export function TrackModal({ track, projectColor, onSave, onClose }: TrackModalP
                   <Button
                     type="button"
                     variant="outline"
-                    className="w-full justify-center gap-2"
+                    className="w-full justify-center gap-sm"
                     onClick={handleSelectAudio}
                     disabled={selectingAudio}
                   >
@@ -193,37 +193,37 @@ export function TrackModal({ track, projectColor, onSave, onClose }: TrackModalP
               </div>
 
               {/* Number & Title */}
-              <div className="grid grid-cols-[auto_1fr] gap-3">
+              <div className="grid grid-cols-[auto_1fr] gap-md">
                 <div>
-                  <label className="text-xs font-medium text-neutral-300 block mb-1">Nº</label>
+                  <label className="text-caption font-medium text-secondary block mb-xs">Nº</label>
                   <input
                     type="text"
                     inputMode="numeric"
                     value={form.number}
                     onChange={e => setForm({ ...form, number: e.target.value.replace(/\D/g, '') })}
                     placeholder="—"
-                    className="w-full bg-neutral-800 border border-neutral-700 rounded-xl px-3 py-2 text-sm text-white placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-white/20"
+                    className="w-full bg-hover border border-default radius-xl px-md py-sm text-body-sm text-primary placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-white/20"
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-neutral-300 block mb-1">Título <span className="text-red-400">*</span></label>
+                  <label className="text-caption font-medium text-secondary block mb-xs">Título <span className="text-red-400">*</span></label>
                   <input
                     ref={titleRef}
                     value={form.title}
                     onChange={e => setForm({ ...form, title: e.target.value })}
                     placeholder="Nome da música..."
-                    className="w-full bg-neutral-800 border border-neutral-700 rounded-xl px-3 py-2 text-sm text-white placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-white/20"
+                    className="w-full bg-hover border border-default radius-xl px-md py-sm text-body-sm text-primary placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-white/20"
                   />
                 </div>
               </div>
 
               {/* Status */}
               <div>
-                <label className="text-xs font-medium text-neutral-300 block mb-1">Status</label>
+                <label className="text-caption font-medium text-secondary block mb-xs">Status</label>
                 <select
                   value={form.status}
                   onChange={e => setForm({ ...form, status: e.target.value as import('@/types').TrackStatus })}
-                  className="w-full bg-neutral-800 border border-neutral-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+                  className="w-full bg-hover border border-default radius-xl px-md py-sm text-body-sm text-primary focus:outline-none focus:ring-2 focus:ring-white/20"
                 >
                   {Object.entries(TRACK_STATUSES).map(([key, info]) => (
                     <option key={key} value={key} style={{ color: info.color }}>
@@ -235,16 +235,16 @@ export function TrackModal({ track, projectColor, onSave, onClose }: TrackModalP
 
               {/* Version Mode */}
               <div>
-                <label className="text-xs font-medium text-neutral-300 block mb-1">Modo de Versões</label>
+                <label className="text-caption font-medium text-secondary block mb-xs">Modo de Versões</label>
                 <select
                   value={form.versionMode}
                   onChange={e => setForm({ ...form, versionMode: e.target.value as 'single' | 'dual' })}
-                  className="w-full bg-neutral-800 border border-neutral-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+                  className="w-full bg-hover border border-default radius-xl px-md py-sm text-body-sm text-primary focus:outline-none focus:ring-2 focus:ring-white/20"
                 >
                   <option value="single">Apenas versão final</option>
                   <option value="dual">Duas versões (Pré-Mix + Master)</option>
                 </select>
-                <p className="text-xs text-neutral-500 mt-1">
+                <p className="text-caption text-muted mt-xs">
                   {form.versionMode === 'single' 
                     ? 'Track terá apenas a versão final masterizada' 
                     : 'Track terá Pré-Mix e Master para comparação'}
@@ -252,38 +252,38 @@ export function TrackModal({ track, projectColor, onSave, onClose }: TrackModalP
               </div>
 
               {/* BPM & Key */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-md">
                 <div>
-                  <label className="text-xs font-medium text-neutral-300 block mb-1">BPM</label>
+                  <label className="text-caption font-medium text-secondary block mb-xs">BPM</label>
                   <input
                     type="text"
                     inputMode="numeric"
                     value={form.bpm}
                     onChange={e => setForm({ ...form, bpm: e.target.value.replace(/\D/g, '') })}
                     placeholder="120"
-                    className="w-full bg-neutral-800 border border-neutral-700 rounded-xl px-3 py-2 text-sm text-white placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-white/20"
+                    className="w-full bg-hover border border-default radius-xl px-md py-sm text-body-sm text-primary placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-white/20"
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-neutral-300 block mb-1">Tom</label>
+                  <label className="text-caption font-medium text-secondary block mb-xs">Tom</label>
                   <input
                     value={form.key}
                     onChange={e => setForm({ ...form, key: e.target.value })}
                     placeholder="C#m"
-                    className="w-full bg-neutral-800 border border-neutral-700 rounded-xl px-3 py-2 text-sm text-white placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-white/20"
+                    className="w-full bg-hover border border-default radius-xl px-md py-sm text-body-sm text-primary placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-white/20"
                   />
                 </div>
               </div>
 
               {/* Notes */}
               <div>
-                <label className="text-xs font-medium text-neutral-300 block mb-1">Notas Gerais</label>
+                <label className="text-caption font-medium text-secondary block mb-xs">Notas Gerais</label>
                 <textarea
                   value={form.notes}
                   onChange={e => setForm({ ...form, notes: e.target.value })}
                   placeholder="Anotações sobre a faixa..."
                   rows={3}
-                  className="w-full bg-neutral-800 border border-neutral-700 rounded-xl px-3 py-2 text-sm text-white placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-white/20 resize-none"
+                  className="w-full bg-hover border border-default radius-xl px-md py-sm text-body-sm text-primary placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-white/20 resize-none"
                 />
               </div>
             </motion.div>
@@ -294,71 +294,71 @@ export function TrackModal({ track, projectColor, onSave, onClose }: TrackModalP
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="space-y-4"
+              className="gap-lg"
             >
-              <p className="text-xs text-neutral-500 mb-2">Centralize aqui todos os dados de geração por IA. Útil para replicar, versionar ou documentar o processo criativo.</p>
+              <p className="text-caption text-muted mb-sm">Centralize aqui todos os dados de geração por IA. Útil para replicar, versionar ou documentar o processo criativo.</p>
 
-              <div className="space-y-4">
+              <div className="gap-lg">
                 {/* Lyrics */}
                 <div>
-                  <label className="text-xs font-medium text-neutral-300 flex items-center gap-2 block mb-1"><FileText className="w-3.5 h-3.5" /> Letra da Música</label>
+                  <label className="text-caption font-medium text-secondary flex items-center gap-xs block mb-xs"><FileText className="w-3.5 h-3.5" /> Letra da Música</label>
                   <textarea
                     value={form.lyrics}
                     onChange={e => setForm({ ...form, lyrics: e.target.value })}
                     placeholder="Cole a letra completa aqui..."
                     rows={8}
-                    className="w-full bg-neutral-800 border border-neutral-700 rounded-xl px-3 py-2 text-sm text-white placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-white/20 resize-y font-mono text-xs leading-relaxed"
+                    className="w-full bg-hover border border-default radius-xl px-md py-sm text-body-sm text-primary placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-white/20 resize-y font-mono text-xs leading-relaxed"
                     style={{ fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace' }}
                   />
                 </div>
 
                 {/* Prompt */}
                 <div>
-                  <label className="text-xs font-medium text-neutral-300 flex items-center gap-2 block mb-1"><Sparkles className="w-3.5 h-3.5" /> Prompt Utilizado</label>
+                  <label className="text-caption font-medium text-secondary flex items-center gap-xs block mb-xs"><Sparkles className="w-3.5 h-3.5" /> Prompt Utilizado</label>
                   <textarea
                     value={form.prompt}
                     onChange={e => setForm({ ...form, prompt: e.target.value })}
                     placeholder="Prompt principal usado na IA (ex: Suno, Udio, etc.)"
                     rows={3}
-                    className="w-full bg-neutral-800 border border-neutral-700 rounded-xl px-3 py-2 text-sm text-white placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-white/20 resize-y font-mono text-xs leading-relaxed"
+                    className="w-full bg-hover border border-default radius-xl px-md py-sm text-body-sm text-primary placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-white/20 resize-y font-mono text-xs leading-relaxed"
                     style={{ fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace' }}
                   />
                 </div>
 
                 {/* Positive Prompt */}
                 <div>
-                  <label className="text-xs font-medium text-neutral-300 flex items-center gap-2 block mb-1"><Brain className="w-3.5 h-3.5" /> Positivos (Positive Prompt)</label>
+                  <label className="text-caption font-medium text-secondary flex items-center gap-xs block mb-xs"><Brain className="w-3.5 h-3.5" /> Positivos (Positive Prompt)</label>
                   <textarea
                     value={form.positivePrompt}
                     onChange={e => setForm({ ...form, positivePrompt: e.target.value })}
                     placeholder="Tags positivas, estilos desejados, instrumentação..."
                     rows={3}
-                    className="w-full bg-neutral-800 border border-neutral-700 rounded-xl px-3 py-2 text-sm text-white placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-white/20 resize-y font-mono text-xs leading-relaxed"
+                    className="w-full bg-hover border border-default radius-xl px-md py-sm text-body-sm text-primary placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-white/20 resize-y font-mono text-xs leading-relaxed"
                     style={{ fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace' }}
                   />
                 </div>
 
                 {/* Style */}
                 <div>
-                  <label className="text-xs font-medium text-neutral-300 flex items-center gap-2 block mb-1"><Settings className="w-3.5 h-3.5" /> Estilos / Tags de Estilo</label>
+                  <label className="text-caption font-medium text-secondary flex items-center gap-xs block mb-xs"><Settings className="w-3.5 h-3.5" /> Estilos / Tags de Estilo</label>
                   <textarea
                     value={form.style}
                     onChange={e => setForm({ ...form, style: e.target.value })}
                     placeholder="Ex: synthwave, dark ambient, female vocals, 120bpm, minor key..."
                     rows={2}
-                    className="w-full bg-neutral-800 border border-neutral-700 rounded-xl px-3 py-2 text-sm text-white placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-white/20 resize-y font-mono text-xs leading-relaxed"
+                    className="w-full bg-hover border border-default radius-xl px-md py-sm text-body-sm text-primary placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-white/20 resize-y font-mono text-xs leading-relaxed"
                     style={{ fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace' }}
                   />
                 </div>
 
                 {/* Mode */}
                 <div>
-                  <label className="text-xs font-medium text-neutral-300 flex items-center gap-2 block mb-1"><PenTool className="w-3.5 h-3.5" /> Modo / Modelo</label>
+                  <label className="text-caption font-medium text-secondary flex items-center gap-xs block mb-xs"><PenTool className="w-3.5 h-3.5" /> Modo / Modelo</label>
                   <input
                     value={form.mode}
                     onChange={e => setForm({ ...form, mode: e.target.value })}
                     placeholder="Ex: Suno v3.5, Udio 130, Chirp, custom..."
-                    className="w-full bg-neutral-800 border border-neutral-700 rounded-xl px-3 py-2 text-sm text-white placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-white/20 font-mono text-xs"
+                    className="w-full bg-hover border border-default radius-xl px-md py-sm text-body-sm text-primary placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-white/20 font-mono text-xs"
                     style={{ fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace' }}
                   />
                 </div>
@@ -367,7 +367,7 @@ export function TrackModal({ track, projectColor, onSave, onClose }: TrackModalP
           )}
 
           {/* Actions */}
-          <div className="flex gap-2 pt-2 border-t border-neutral-800 mt-2">
+          <div className="flex gap-sm pt-sm border-t border-subtle mt-sm">
             <Button type="button" variant="secondary" className="flex-1" onClick={onClose}>Cancelar</Button>
             <Button type="submit" className="flex-1" style={{ '--accent': projectColor }} disabled={!form.title.trim()}>
               {track ? 'Salvar' : 'Criar'}
