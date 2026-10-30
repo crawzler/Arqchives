@@ -5,6 +5,7 @@ import { Music2, FileText, Clock, MoreHorizontal, ListMusic } from 'lucide-react
 import { cn } from '@/lib/utils'
 import { TRACK_STATUSES } from '@/types'
 import { useFileOperations } from '@/hooks/useAlbumOperations'
+import { StatusBadge } from '@/components/ui/Badges'
 
 interface TrackRowProps {
   track: import('@/types').Track
@@ -22,7 +23,6 @@ export function TrackRow({ track, index, projectColor, albumCover, onOpen, onEdi
   // Satisfy unused param linter
   void onEdit; void onDelete;
   const { getLocalUrl } = useFileOperations()
-  const status = TRACK_STATUSES[track.status]
   const hasAudio = track.audioVersions && track.audioVersions.length > 0
   const [coverSrc, setCoverSrc] = useState<string | null>(null)
   const [audioDuration, setAudioDuration] = useState<string>('--:--')
@@ -70,10 +70,12 @@ export function TrackRow({ track, index, projectColor, albumCover, onOpen, onEdi
       onClick={onOpen}
       onContextMenu={onContextMenu}
       className={cn(
-        "w-full flex items-center gap-2 px-3 py-1.5 rounded bg-neutral-900/40 border border-neutral-800 cursor-pointer",
-        "hover:border-neutral-700 hover:bg-neutral-900/60 transition-colors duration-150 text-left"
+        "w-full flex items-center gap-sm px-md py-sm",
+        "rounded-lg",
+        "bg-subtle border border-subtle cursor-pointer",
+        "hover:border-muted hover:bg-hover trans-colors text-left"
       )}
-      style={{ borderColor: projectColor + '30' }}
+      style={{ borderColor: `hsl(var(--color-border-default) / var(--project-color-muted))` }}
     >
       {/* Album Cover - smaller */}
       <div className="w-8 h-8 rounded flex-shrink-0 overflow-hidden bg-neutral-800 relative">
@@ -88,30 +90,24 @@ export function TrackRow({ track, index, projectColor, albumCover, onOpen, onEdi
 
       {/* Main Info */}
       <div className="flex-1 min-w-0">
-        <h4 className="font-medium text-white truncate text-sm">{trackNumber}. {track.title}</h4>
-        <div className="flex items-center gap-2 text-[10px] text-neutral-500 mt-0.5">
-          {track.bpm && <span className="flex items-center gap-0.5 whitespace-nowrap"><Music2 className="w-2.5 h-2.5" />{track.bpm} BPM</span>}
-          {track.key && <span className="flex items-center gap-0.5 whitespace-nowrap">🎹 {track.key}</span>}
-          <span className="flex items-center gap-0.5 whitespace-nowrap"><Clock className="w-2.5 h-2.5" />{audioDuration}</span>
-          <span className="flex items-center gap-0.5 whitespace-nowrap"><FileText className="w-2.5 h-2.5" />{audioSize}</span>
-          {audioExt && <span className="px-1.5 py-0.5 rounded bg-neutral-800 text-[9px] font-mono">{audioExt}</span>}
+        <h4 className="font-medium text-primary truncate text-sm">{trackNumber}. {track.title}</h4>
+        <div className="flex items-center gap-sm text-caption text-muted mt-xs flex-wrap">
+          {track.bpm && <span className="flex items-center gap-xs whitespace-nowrap"><Music2 className="w-3 h-3" />{track.bpm} BPM</span>}
+          {track.key && <span className="flex items-center gap-xs whitespace-nowrap">🎹 {track.key}</span>}
+          <span className="flex items-center gap-xs whitespace-nowrap"><Clock className="w-3 h-3" />{audioDuration}</span>
+          <span className="flex items-center gap-xs whitespace-nowrap"><FileText className="w-3 h-3" />{audioSize}</span>
+          {audioExt && <span className="px-xs py-xs rounded bg-neutral-800 text-[9px] font-mono">{audioExt}</span>}
         </div>
       </div>
 
-      {/* Status badge - compact */}
-      <span className={cn(
-        "px-2 py-0.5 rounded text-[9px] font-medium uppercase tracking-wide flex items-center gap-1 flex-shrink-0",
-        `bg-${status.color}-500/15 text-${status.color}-400 border border-${status.color}-500/20`
-      ).replace('bg-', 'bg-').replace('text-', 'text-').replace('border-', 'border-')}>
-        <span className="w-1 h-1 rounded-full" style={{ backgroundColor: status.color }} />
-        {status.label.split(' ')[1]}
-      </span>
+      {/* Status badge - using unified component */}
+      <StatusBadge status={track.status as keyof typeof TRACK_STATUSES} size="sm" />
 
       {/* Add to Playlist button - visible on hover or if has audio */}
       {onAddToPlaylist && track.audioVersions?.length > 0 && (
         <button
           onClick={(e) => { e.stopPropagation(); onAddToPlaylist() }}
-          className="w-7 h-7 rounded bg-white/5 hover:bg-emerald-600/20 flex items-center justify-center text-neutral-500 hover:text-emerald-400 transition-colors flex-shrink-0 ml-1"
+          className="w-7 h-7 rounded-lg bg-white/5 hover:bg-emerald-600/20 flex items-center justify-center text-neutral-500 hover:text-emerald-400 trans-colors flex-shrink-0 ml-xs"
           title="Adicionar à Playlist"
         >
           <ListMusic className="w-3.5 h-3.5" />
@@ -122,7 +118,7 @@ export function TrackRow({ track, index, projectColor, albumCover, onOpen, onEdi
       {onContextMenu && (
         <button
           onClick={(e) => { e.stopPropagation(); onContextMenu(e) }}
-          className="w-7 h-7 rounded bg-white/5 hover:bg-white/10 flex items-center justify-center text-neutral-500 hover:text-white transition-colors flex-shrink-0 ml-1"
+          className="w-7 h-7 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center text-neutral-500 hover:text-white trans-colors flex-shrink-0 ml-xs"
           title="Mais opções"
         >
           <MoreHorizontal className="w-3.5 h-3.5" />

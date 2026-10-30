@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils'
 import { TRACK_STATUSES } from '@/types'
 import { ContextMenu, useContextMenu, createAlbumContextMenuItems } from '@/components/ui/ContextMenu'
 import { useAddAlbumToQueue, useActiveProject } from '@/store/useAppStore'
+import { TypeBadge, StatusBadge } from '@/components/ui/Badges'
 
 interface AlbumCardProps {
   album: import('@/types').Album
@@ -47,8 +48,7 @@ export default function AlbumCard({ album, project, projectColor, onClick, onEdi
         navigator.clipboard.writeText(paths.albumPath)
       },
       () => {
-        // Deletar álbum - would need deleteAlbum from store
-        // This would need to be passed as prop or accessed from store
+        // Deletar álbum
         if (window.confirm(`Deletar "${album.title}"?`)) {
           // TODO: Implement delete album action
         }
@@ -75,16 +75,6 @@ export default function AlbumCard({ album, project, projectColor, onClick, onEdi
     }
   }, [album.coverPath, getLocalUrl])
 
-  const getTypeColor = (type: string) => {
-    switch (type) {
-      case 'Álbum': return 'text-blue-400 border-blue-500/30'
-      case 'EP': return 'text-green-400 border-green-500/30'
-      case 'Single': return 'text-purple-400 border-purple-500/30'
-      case 'Compilação': return 'text-amber-400 border-amber-500/30'
-      default: return 'text-neutral-400 border-neutral-500/30'
-    }
-  }
-
   const getStatusCounts = () => {
     const counts: Record<string, number> = {}
     album.tracks.forEach(t => {
@@ -106,10 +96,10 @@ export default function AlbumCard({ album, project, projectColor, onClick, onEdi
         whileHover={{ y: -2, boxShadow: '0 8px 32px rgba(0,0,0,0.3)' }}
         transition={{ type: 'spring', stiffness: 400, damping: 25 }}
         className={cn(
-          "relative group bg-neutral-900 border border-neutral-800 rounded-xl overflow-hidden cursor-pointer",
-          "hover:border-neutral-700 transition-all duration-200"
+          "relative group bg-neutral-900 border rounded-xl overflow-hidden cursor-pointer",
+          "hover:border-muted trans-all"
         )}
-        style={{ borderColor: projectColor + '40' }}
+        style={{ borderColor: `hsl(var(--color-border-default) / var(--project-color-strong))` }}
       >
         {/* Cover - clean, no overlays */}
         <div className="aspect-square relative overflow-hidden bg-neutral-950">
@@ -121,36 +111,30 @@ export default function AlbumCard({ album, project, projectColor, onClick, onEdi
               loading="lazy"
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center" style={{ backgroundColor: projectColor + '15' }}>
+            <div className="w-full h-full flex items-center justify-center" style={{ backgroundColor: `hsl(var(--project-color) / var(--project-color-subtle))` }}>
               <span className="text-6xl opacity-40">{album.type === 'Single' ? '🎵' : '💿'}</span>
             </div>
           )}
         </div>
 
         {/* Info panel - now contains everything */}
-        <div className="p-4 border-t border-neutral-800/50 bg-neutral-950/50">
+        <div className="p-lg border-t border-subtle bg-elevated/50">
           {/* Title */}
-          <h3 className="font-semibold text-white truncate mb-3 tracking-tight text-base leading-snug">
+          <h3 className="font-semibold text-primary truncate mb-md tracking-tight text-heading-sm leading-snug">
             {album.title}
           </h3>
 
           {/* Bottom row: Type badge | Year | Status dots | Edit button */}
-          <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex items-center justify-between gap-md flex-wrap">
             {/* Left: Type + Year */}
-            <div className="flex items-center gap-2 flex-1 min-w-0">
-              {/* Type badge */}
-              <span className={cn(
-                "px-2 py-1 rounded text-[10px] font-medium uppercase tracking-wide whitespace-nowrap",
-                "bg-black/60 backdrop-blur-sm border",
-                getTypeColor(album.type)
-              )}>
-                {album.type}
-              </span>
+            <div className="flex items-center gap-sm flex-1 min-w-0">
+              {/* Type badge - using unified component */}
+              <TypeBadge type={album.type} size="sm" />
 
               {/* Year */}
-              <span className="px-2 py-1 rounded text-[10px] font-mono font-medium tabular-nums
-                bg-black/60 backdrop-blur-sm border border-neutral-700 text-neutral-400 whitespace-nowrap">
-                <Calendar className="w-3 h-3 inline-block align-middle mr-1" />
+              <span className="px-sm py-xs rounded text-caption font-mono font-medium tabular-nums
+                bg-neutral-900/50 backdrop-blur-sm border border-subtle text-muted whitespace-nowrap">
+                <Calendar className="w-3 h-3 inline-block align-middle mr-xs" />
                 {album.year}
               </span>
             </div>
@@ -160,22 +144,21 @@ export default function AlbumCard({ album, project, projectColor, onClick, onEdi
               initial={{ opacity: 0, x: 10 }}
               animate={{ opacity: hovered ? 1 : 0, x: 0 }}
               transition={{ duration: 150 }}
-              className="flex items-center gap-1.5 flex-shrink-0"
+              className="flex items-center gap-xs flex-shrink-0"
             >
               {statusOrder
                 .filter(s => getStatusCounts()[s] > 0)
                 .map((status) => {
                   const count = getStatusCounts()[status]
-                  const info = TRACK_STATUSES[status as keyof typeof TRACK_STATUSES]
                   return (
                     <span
                       key={status}
-                      className="px-1.5 py-0.5 rounded text-[9px] font-medium flex items-center gap-1 border
-                        bg-black/60 backdrop-blur-sm text-white whitespace-nowrap"
-                      style={{ borderColor: info.color + '60' }}
-                      title={`${info.label}: ${count}`}
+                      className="px-xs py-xs rounded text-[9px] font-medium flex items-center gap-xs border
+                        bg-neutral-900/50 backdrop-blur-sm text-white whitespace-nowrap"
+                      style={{ borderColor: `hsl(var(--color-status-${status})) / 0.4` }}
+                      title={`${TRACK_STATUSES[status as keyof typeof TRACK_STATUSES].label}: ${count}`}
                     >
-                      <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: info.color }} />
+                      <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: `hsl(var(--color-status-${status}))` }} />
                       {count}
                     </span>
                   )
@@ -187,7 +170,7 @@ export default function AlbumCard({ album, project, projectColor, onClick, onEdi
               onClick={(e) => onEdit(e, album)}
               className="w-8 h-8 rounded-lg bg-black/50 hover:bg-black/70 backdrop-blur-sm
                 flex items-center justify-center text-neutral-400 hover:text-white
-                border border-neutral-700 hover:border-neutral-600 transition-all duration-200
+                border border-subtle hover:border-muted trans-all
                 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/20
                 opacity-0 group-hover:opacity-100 transition-opacity"
               title="Editar álbum"
@@ -197,14 +180,14 @@ export default function AlbumCard({ album, project, projectColor, onClick, onEdi
           </div>
 
           {/* Track/Todo counts - subtle, bottom */}
-          <div className="mt-3 pt-3 border-t border-neutral-800/50 flex items-center justify-between text-[11px]">
-            <div className="flex items-center gap-3 text-neutral-500 font-mono tabular-nums">
-              <span className="flex items-center gap-1.5">
+          <div className="mt-md pt-md border-t border-subtle flex items-center justify-between text-body-sm">
+            <div className="flex items-center gap-md text-muted font-mono tabular-nums">
+              <span className="flex items-center gap-xs">
                 <Music2 className="w-3 h-3 opacity-60" />
                 {album.tracks.length}
               </span>
               {album.todos.length > 0 && (
-                <span className="flex items-center gap-1.5 text-amber-400/80">
+                <span className="flex items-center gap-xs text-amber-400/80">
                   <Clock className="w-3 h-3" />
                   {album.todos.filter(t => !t.done).length}
                 </span>
