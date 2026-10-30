@@ -58,7 +58,12 @@ export function ContextMenu({ items, x, y, onClose }: ContextMenuProps) {
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: -4 }}
         transition={{ duration: 0.1 }}
-        className="fixed z-50 min-w-[150px] bg-neutral-900 border border-neutral-700 rounded-lg shadow-xl overflow-hidden"
+        className={cn(
+          "fixed z-[var(--z-popover)] min-w-[var(--menu-min-width)]",
+          "bg-neutral-900 border border-default rounded-[var(--menu-radius)]",
+          "shadow-elev-4 overflow-hidden",
+          "trans-all"
+        )}
         role="menu"
       >
         {items.map((item, index) => (
@@ -70,9 +75,10 @@ export function ContextMenu({ items, x, y, onClose }: ContextMenuProps) {
             onClick={() => { item.onClick(); onClose() }}
             disabled={item.disabled}
             className={cn(
-              "w-full flex items-center gap-2 px-2.5 py-1.5 text-sm text-neutral-200 hover:bg-white/10 transition-colors",
-              "focus:outline-none focus:bg-white/10",
-              item.disabled && "opacity-50 cursor-not-allowed",
+              "w-full flex items-center gap-sm px-md py-sm text-body-sm text-primary",
+              "focus:outline-none",
+              "hover:bg-hover trans-colors",
+              item.disabled && "opacity-50 cursor-not-allowed text-disabled",
               item.danger && "text-red-400 hover:bg-red-600/10"
             )}
             role="menuitem"
