@@ -31,7 +31,7 @@ function fileUrlToPath(url: string): string {
   }
 }
 
-export function Waveform({ audioPath, currentTime, duration, color = 'hsl(var(--primary))', height = 100, className, onSeek, isPlaying, onReady }: WaveformProps) {
+export function Waveform({ audioPath, currentTime, duration, color = 'hsl(var(--color-waveform-progress))', height = 80, className, onSeek, isPlaying, onReady }: WaveformProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [peaks, setPeaks] = useState<Float32Array | null>(null)
   const [decodedDuration, setDecodedDuration] = useState(0)
@@ -203,7 +203,8 @@ export function Waveform({ audioPath, currentTime, duration, color = 'hsl(var(--
 
     ctx.clearRect(0, 0, canvasWidth, canvasHeight)
 
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.1)'
+    // Track background - uses token
+    ctx.fillStyle = 'hsl(var(--color-waveform-track) / 0.1)'
     drawWaveform(ctx, peaks, canvasWidth, canvasHeight, centerY)
 
     if (progress > 0) {
