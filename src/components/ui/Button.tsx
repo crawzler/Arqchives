@@ -11,8 +11,17 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 
 const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant = 'primary', size = 'md', isLoading, children, disabled, ...props }, ref) => {
-    const baseStyles = "inline-flex items-center justify-center font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 active:scale-[0.98]"
+    // Base styles using design tokens
+    const baseStyles = cn(
+      "inline-flex items-center justify-center font-medium",
+      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+      "disabled:pointer-events-none disabled:opacity-50",
+      "active:scale-[0.98]",
+      // Transitions from tokens
+      "trans-colors trans-transform"
+    )
 
+    // Variant styles using semantic color tokens
     const variants = {
       primary: "bg-white text-black hover:bg-white/90 shadow-sm",
       secondary: "bg-neutral-800 text-white hover:bg-neutral-700 border border-neutral-700",
@@ -21,11 +30,12 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       outline: "border border-neutral-700 bg-transparent hover:bg-neutral-800",
     }
 
+    // Size styles using design token values
     const sizes = {
-      sm: "h-8 px-3 text-xs rounded-md gap-1.5",
-      md: "h-10 px-4 text-sm rounded-md gap-2",
-      lg: "h-12 px-6 text-base rounded-lg gap-2",
-      icon: "h-10 w-10 rounded-md",
+      sm: "h-[var(--btn-height-sm)] px-[var(--btn-padding-x-sm)] text-xs rounded-[var(--btn-radius)] gap-sm",
+      md: "h-[var(--btn-height-md)] px-[var(--btn-padding-x-md)] text-sm rounded-[var(--btn-radius)] gap-md",
+      lg: "h-[var(--btn-height-lg)] px-[var(--btn-padding-x-lg)] text-base rounded-[var(--btn-radius)] gap-md",
+      icon: "h-[var(--btn-height-icon)] w-[var(--btn-height-icon)] rounded-[var(--btn-radius)]",
     }
 
     return (
