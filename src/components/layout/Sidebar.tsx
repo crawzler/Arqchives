@@ -419,7 +419,7 @@ function ProjectSelector({
   onSelect: (id: string) => void
   onDeleteProject: (id: string) => void
   onUpdateProject: (id: string, data: Partial<{ name: string; genre: string; photo: string }>) => void
-  organizeProjectFile: (filePath: string, projectName: string) => Promise<string>
+  organizeProjectFile: (filePath: string, projectName: string, overrideMode?: 'move' | 'copy', customFileName?: string) => Promise<string>
   getLocalUrl: (filePath: string) => Promise<string | null>
 }) {
   const [open, setOpen] = useState(false)
@@ -495,7 +495,7 @@ function ProjectSelector({
     if (editForm.photoFilePath) {
       const project = projects.find(p => p.id === projectId)
       if (project) {
-        const organizedPath = await organizeProjectFile(editForm.photoFilePath, project.name)
+        const organizedPath = await organizeProjectFile(editForm.photoFilePath, project.name, undefined, `Cover - ${project.name}`)
         onUpdateProject(projectId, { ...editForm, photo: organizedPath })
       } else {
         onUpdateProject(projectId, editForm)

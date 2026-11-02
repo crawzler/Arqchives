@@ -275,7 +275,7 @@ export default function App() {
         {/* Main Content */}
         <main 
           className={cn(
-            "flex-1 overflow-auto bg-neutral-950 transition-all duration-300",
+            "flex-1 overflow-hidden bg-neutral-950 transition-all duration-300",
             isLoading && "opacity-50 pointer-events-none"
           )}
           style={{ marginLeft: sidebarCollapsed ? 0 : sidebarWidth }}
@@ -333,9 +333,9 @@ export default function App() {
               accent: data.accent || '#3b82f6' 
             })
             
-            // If there's a photo file path, organize it into the project's Artwork folder
+            // If there's a photo file path, organize it into the project's Artwork folder with custom name
             if (data.photoFilePath && appRoot) {
-              const organizedPath = await organizeProjectFile(data.photoFilePath, newProject.name)
+              const organizedPath = await organizeProjectFile(data.photoFilePath, newProject.name, undefined, `Cover - ${newProject.name}`)
               // Update project with the organized file path
               updateProject(newProject.id, { photo: organizedPath })
             }

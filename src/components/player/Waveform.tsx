@@ -201,19 +201,36 @@ export function Waveform({ audioPath, currentTime, duration, color = 'hsl(var(--
     const progress = effectiveDuration > 0 ? currentTime / effectiveDuration : 0
     const progressX = progress * canvasWidth
 
+    // Resolve CSS variables for canvas (canvas doesn't support var())
+    const trackColor = getComputedStyle(document.documentElement).getPropertyValue('--color-waveform-track').trim()
+    const progressColor = color.startsWith('var(')
+      ? `hsl(${getComputedStyle(document.documentElement).getPropertyValue(color.slice(4, -1)).trim()})`
+      : color
+
     ctx.clearRect(0, 0, canvasWidth, canvasHeight)
 
-    // Track background - uses token
-    ctx.fillStyle = 'hsl(var(--color-waveform-track) / 0.1)'
+    // Track background (unplayed portion) - full width, dark gray
+    ctx.fillStyle = `hsl(${trackColor})`
     drawWaveform(ctx, peaks, canvasWidth, canvasHeight, centerY)
 
-    if (progress > 0) {
-      ctx.fillStyle = color
-      drawWaveformProgress(ctx, peaks, canvasWidth, canvasHeight, centerY, progressX)
+    // Progress portion (played) - only up to progressX, project color
+    if (progress > 0 && progress < 1) {
+      ctx.save()
+      ctx.beginPath()
+      ctx.rect(0, 0, progressX, canvasHeight)
+      ctx.clip()
+      ctx.fillStyle = progressColor
+      drawWaveform(ctx, peaks, canvasWidth, canvasHeight, centerY)
+      ctx.restore()
+    } else if (progress >= 1) {
+      // Finished - full project color
+      ctx.fillStyle = progressColor
+      drawWaveform(ctx, peaks, canvasWidth, canvasHeight, centerY)
     }
 
+    // Progress line indicator
     if (progress > 0 && progress < 1) {
-      ctx.strokeStyle = color
+      ctx.strokeStyle = progressColor
       ctx.lineWidth = 2 * window.devicePixelRatio
       ctx.beginPath()
       ctx.moveTo(progressX, 0)

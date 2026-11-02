@@ -244,7 +244,8 @@ export function useFileOrganizer() {
   const organizeProjectFile = useCallback(async (
     filePath: string,
     projectName: string,
-    overrideMode?: 'move' | 'copy'
+    overrideMode?: 'move' | 'copy',
+    customFileName?: string // Optional custom filename (e.g., "Cover - Project Name")
   ) => {
     const projectPaths = generateProjectPaths(projectName)
     if (!projectPaths) return filePath
@@ -280,9 +281,14 @@ export function useFileOrganizer() {
 
     await ensureFolder(destFolder)
     const mode = overrideMode ?? 'copy'
+    
+    // Use custom filename if provided (for project covers: "Cover - Project Name")
+    const fileName = customFileName ? `${customFileName}${ext}` : undefined
+    
     const result = await moveOrCopyFile({
       srcPath: filePath,
       destFolder,
+      fileName,
       mode,
     })
 

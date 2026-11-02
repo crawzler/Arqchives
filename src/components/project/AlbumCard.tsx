@@ -87,16 +87,19 @@ export default function AlbumCard({ album, project, projectColor, onClick, onEdi
 
   return (
     <>
-      <motion.button
+      <motion.div
         ref={cardRef}
+        role="button"
+        tabIndex={0}
         onClick={onClick}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } }}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
         onContextMenu={onContextMenu || handleContextMenu}
         whileHover={{ y: -2, boxShadow: '0 8px 32px rgba(0,0,0,0.3)' }}
         transition={{ type: 'spring', stiffness: 400, damping: 25 }}
         className={cn(
-          "relative group bg-neutral-900 border rounded-xl overflow-hidden cursor-pointer",
+          "relative group bg-elevated border rounded-xl overflow-hidden cursor-pointer",
           "hover:border-muted trans-all focus-ring"
         )}
         style={{ borderColor: `hsl(var(--color-border-default) / var(--project-color-strong))` }}
@@ -194,7 +197,7 @@ export default function AlbumCard({ album, project, projectColor, onClick, onEdi
             </div>
           </div>
         </div>
-      </motion.button>
+      </motion.div>
 
       {menuItems && (
         <ContextMenu

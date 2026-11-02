@@ -3,10 +3,9 @@
 import { useState, useEffect } from 'react'
 import { 
   ChevronLeft,
+  ChevronRight,
   Play,
   Pause,
-  Repeat,
-  Shuffle,
   ListMusic,
   Clock,
   X,
@@ -19,14 +18,10 @@ import {
   usePlaylistQueue, 
   usePlaylistCurrentIndex, 
   usePlaylistIsPlaying, 
-  usePlaylistRepeat, 
-  usePlaylistShuffle, 
   usePlaylistCurrentTrack,
   useRemoveFromQueue,
   useSetCurrentIndex,
   useSetIsPlaying,
-  useSetRepeat,
-  useSetShuffle,
 } from '@/store/useAppStore'
 import { useAppStore } from '@/store/useAppStore'
 import { useFileOperations } from '@/hooks/useAlbumOperations'
@@ -41,15 +36,11 @@ export function PlaylistPanel({
   const queue = usePlaylistQueue()
   const currentIndex = usePlaylistCurrentIndex()
   const isPlaying = usePlaylistIsPlaying()
-  const repeat = usePlaylistRepeat()
-  const shuffle = usePlaylistShuffle()
   const currentTrack = usePlaylistCurrentTrack()
   
   const removeFromQueue = useRemoveFromQueue()
   const setCurrentIndex = useSetCurrentIndex()
   const setIsPlaying = useSetIsPlaying()
-  const setRepeat = useSetRepeat()
-  const setShuffle = useSetShuffle()
   const { getLocalUrl: getLocalUrlHook } = useFileOperations()
   
   const [trackDurations, setTrackDurations] = useState<Record<number, string>>({})
@@ -134,15 +125,15 @@ export function PlaylistPanel({
   return (
     <div className="flex flex-col h-full bg-elevated" role="dialog" aria-label="Playlist">
       {/* Header - Solid background */}
-      <header className="flex items-center justify-between px-md py-sm border-b border-subtle bg-elevated sticky top-0 z-sticky flex-shrink-0">
+      <header className="px-md py-sm border-b border-subtle bg-background sticky top-0 z-sticky flex-shrink-0">
+        {/* Line 1: Title */}
         <div className="flex items-center gap-sm">
-          {/* Close/Hide button on the left */}
           <button
             onClick={onClose}
             className="w-7 h-7 radius-lg bg-hover hover:bg-default flex items-center justify-center text-muted hover:text-primary trans-colors focus-ring"
             aria-label="Esconder playlist"
           >
-            <ChevronLeft className="w-4 h-4" />
+            <ChevronRight className="w-4 h-4" />
           </button>
           <div className="flex-1 min-w-0">
             <h3 className="font-medium text-primary truncate text-body-sm">Fila de Reprodução</h3>
@@ -153,37 +144,22 @@ export function PlaylistPanel({
             )}
           </div>
         </div>
-        <div className="flex items-center gap-xs">
-          <button
-            onClick={() => setShuffle(!shuffle)}
-            className={cn(
-              "w-7 h-7 radius-lg flex items-center justify-center text-muted hover:text-primary hover:bg-hover trans-colors focus-ring",
-              shuffle ? "text-primary" : ""
-            )}
-            aria-label="Aleatório"
-            aria-pressed={shuffle}
-          >
-            <Shuffle className="w-3.5 h-3.5" />
-          </button>
-          <button
-            onClick={() => setRepeat(repeat === 'off' ? 'all' : repeat === 'all' ? 'one' : 'off')}
-            className={cn(
-              "w-7 h-7 radius-lg flex items-center justify-center text-muted hover:text-primary hover:bg-hover trans-colors focus-ring",
-              repeat !== 'off' ? "text-primary" : ""
-            )}
-            aria-label={repeat === 'off' ? 'Repetir desligado' : repeat === 'all' ? 'Repetir tudo' : 'Repetir um'}
-            aria-pressed={repeat !== 'off'}
-          >
-            <Repeat className={cn("w-3.5 h-3.5", repeat === 'one' && 'relative after:content-["1"] after:absolute after:text-[7px] after:top-[-2px] after:right-[-4px]')} />
-          </button>
-          <button
-            onClick={() => setShowClearConfirm(true)}
-            disabled={queue.length === 0}
-            className="w-7 h-7 radius-lg flex items-center justify-center text-muted hover:text-amber-400 hover:bg-amber-900/30 trans-colors disabled:opacity-40 disabled:cursor-not-allowed focus-ring"
-            aria-label="Limpar fila (manter faixa atual)"
-          >
-            <Eraser className="w-3.5 h-3.5" />
-          </button>
+
+        {/* Line 2: Track count + controls */}
+        <div className="flex items-center gap-sm mt-xs pt-xs border-t border-subtle">
+          <div className="text-[11px] text-muted flex-shrink-0">
+            {queue.length} {queue.length === 1 ? 'faixa' : 'faixas'} na fila
+          </div>
+          <div className="flex items-center gap-xs ml-auto">
+            <button
+              onClick={() => setShowClearConfirm(true)}
+              disabled={queue.length === 0}
+              className="w-7 h-7 radius-lg flex items-center justify-center text-muted hover:text-amber-400 hover:bg-amber-900/30 trans-colors disabled:opacity-40 disabled:cursor-not-allowed focus-ring"
+              aria-label="Limpar fila (manter faixa atual)"
+            >
+              <Eraser className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
       </header>
 
@@ -219,7 +195,7 @@ export function PlaylistPanel({
       )}
       
       {/* Queue List */}
-      <div className="flex-1 overflow-y-auto px-sm py-sm bg-elevated">
+      <div className="flex-1 overflow-y-auto px-sm py-sm bg-background">
         {queue.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center text-muted">
             <ListMusic className="w-10 h-10 mb-md opacity-30" />
@@ -228,10 +204,6 @@ export function PlaylistPanel({
           </div>
         ) : (
           <>
-            {/* Track count inside playlist area - solid background */}
-            <div className="px-sm py-xs text-[11px] text-muted border-b border-subtle bg-elevated mb-xs">
-              {queue.length} {queue.length === 1 ? 'faixa' : 'faixas'} na fila
-            </div>
             <ul className="space-y-[2px]" role="listbox" aria-label="Fila de reprodução">
             {queue.map((item, index) => {
                 const isCurrent = index === currentIndex
@@ -262,24 +234,27 @@ export function PlaylistPanel({
                       )}
                       {/* Play/Pause overlay on cover */}
                       {isCurrent && (
-                        <button
+                        <div
                           onClick={(e) => { e.stopPropagation(); setIsPlaying(!isPlaying); }}
-                          className="absolute inset-0 flex items-center justify-center bg-black/40 hover:bg-black/50 trans-colors focus-ring"
+                          role="button"
                           aria-label={isPlaying ? 'Pausar' : 'Reproduzir'}
+                          tabIndex={0}
+                          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setIsPlaying(!isPlaying); } }}
+                          className="absolute inset-0 flex items-center justify-center bg-black/40 hover:bg-black/50 trans-colors focus-ring"
                         >
                           {isPlaying ? (
                             <Pause className="w-4 h-4 text-primary" />
                           ) : (
                             <Play className="w-4 h-4 text-primary ml-[2px]" />
                           )}
-                        </button>
+                        </div>
                       )}
                     </div>
 
                     {/* Track info - expanded to fill space */}
                     <div className="flex-1 min-w-0 pr-sm">
                       <p className="font-medium text-primary truncate text-body-sm">
-                        {index + 1}. {item.track.title}
+                        {item.track.number ? `${item.track.number}.` : `${index + 1}.`} {item.track.title}
                       </p>
                       <p className="text-[10px] text-muted flex items-center gap-xs truncate mt-xs">
                         <span className="flex-shrink-0">{item.album.title}</span>
@@ -291,13 +266,16 @@ export function PlaylistPanel({
                     </div>
 
                     {/* Remove button - floating on the right */}
-                    <button
+                    <div
                       onClick={(e) => { e.stopPropagation(); removeFromQueue(index) }}
-                      className="absolute right-xs top-1/2 -translate-y-1/2 w-5 h-5 radius flex items-center justify-center text-muted hover:text-red-400 hover:bg-red-900/30 trans-colors opacity-0 group-hover:opacity-100 focus-ring"
+                      role="button"
                       aria-label="Remover da fila"
+                      tabIndex={0}
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); removeFromQueue(index); } }}
+                      className="absolute right-xs top-1/2 -translate-y-1/2 w-5 h-5 radius flex items-center justify-center text-muted hover:text-red-400 hover:bg-red-900/30 trans-colors opacity-0 group-hover:opacity-100 focus-ring"
                     >
                       <X className="w-3 h-3" />
-                    </button>
+                    </div>
                   </button>
                 )
               })}

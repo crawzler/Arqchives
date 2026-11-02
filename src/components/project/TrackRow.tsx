@@ -65,20 +65,30 @@ export function TrackRow({ track, index, projectColor, albumCover, onOpen, onEdi
 
   const trackNumber = track.number || index
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      onOpen()
+    }
+  }
+
   return (
-    <button
+    <div
       onClick={onOpen}
       onContextMenu={onContextMenu}
+      onKeyDown={handleKeyDown}
+      tabIndex={0}
+      role="button"
       className={cn(
-        "w-full flex items-center gap-sm px-md py-sm",
-        "rounded-lg",
-        "bg-subtle border border-subtle cursor-pointer",
-        "hover:border-muted hover:bg-hover trans-colors text-left focus-ring"
+        "w-full flex items-center gap-xs px-sm py-xs",
+        "rounded",
+        "bg-elevated border border-subtle cursor-pointer",
+        "hover:border-muted hover:bg-elevated/80 trans-colors text-left focus-ring"
       )}
       style={{ borderColor: `hsl(var(--color-border-default) / var(--project-color-muted))` }}
     >
       {/* Album Cover - smaller */}
-      <div className="w-8 h-8 rounded flex-shrink-0 overflow-hidden bg-neutral-800 relative">
+      <div className="w-7 h-7 rounded flex-shrink-0 overflow-hidden bg-neutral-800 relative">
         {coverSrc ? (
           <img src={coverSrc} alt="" className="w-full h-full object-cover" />
         ) : (
@@ -90,13 +100,13 @@ export function TrackRow({ track, index, projectColor, albumCover, onOpen, onEdi
 
       {/* Main Info */}
       <div className="flex-1 min-w-0">
-        <h4 className="font-medium text-primary truncate text-sm">{trackNumber}. {track.title}</h4>
-        <div className="flex items-center gap-sm text-caption text-muted mt-xs flex-wrap">
+        <h4 className="font-medium text-primary truncate text-xs">{trackNumber}. {track.title}</h4>
+        <div className="flex items-center gap-xs text-[10px] text-muted flex-wrap">
           {track.bpm && <span className="flex items-center gap-xs whitespace-nowrap"><Music2 className="w-3 h-3" />{track.bpm} BPM</span>}
           {track.key && <span className="flex items-center gap-xs whitespace-nowrap">🎹 {track.key}</span>}
           <span className="flex items-center gap-xs whitespace-nowrap"><Clock className="w-3 h-3" />{audioDuration}</span>
           <span className="flex items-center gap-xs whitespace-nowrap"><FileText className="w-3 h-3" />{audioSize}</span>
-          {audioExt && <span className="px-xs py-xs rounded bg-neutral-800 text-[9px] font-mono">{audioExt}</span>}
+          {audioExt && <span className="px-1 py-0.5 rounded bg-neutral-800 text-[8px] font-mono">{audioExt}</span>}
         </div>
       </div>
 
@@ -107,10 +117,10 @@ export function TrackRow({ track, index, projectColor, albumCover, onOpen, onEdi
       {onAddToPlaylist && track.audioVersions?.length > 0 && (
         <button
           onClick={(e) => { e.stopPropagation(); onAddToPlaylist() }}
-          className="w-7 h-7 rounded-lg bg-white/5 hover:bg-emerald-600/20 flex items-center justify-center text-neutral-500 hover:text-emerald-400 trans-colors flex-shrink-0 ml-xs focus-ring"
+          className="w-6 h-6 rounded bg-white/5 hover:bg-emerald-600/20 flex items-center justify-center text-neutral-500 hover:text-emerald-400 trans-colors flex-shrink-0 ml-xs focus-ring"
           title="Adicionar à Playlist"
         >
-          <ListMusic className="w-3.5 h-3.5" />
+          <ListMusic className="w-3 h-3" />
         </button>
       )}
 
@@ -118,12 +128,12 @@ export function TrackRow({ track, index, projectColor, albumCover, onOpen, onEdi
       {onContextMenu && (
         <button
           onClick={(e) => { e.stopPropagation(); onContextMenu(e) }}
-          className="w-7 h-7 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center text-neutral-500 hover:text-white trans-colors flex-shrink-0 ml-xs focus-ring"
+          className="w-6 h-6 rounded bg-white/5 hover:bg-white/10 flex items-center justify-center text-neutral-500 hover:text-white trans-colors flex-shrink-0 ml-xs focus-ring"
           title="Mais opções"
         >
-          <MoreHorizontal className="w-3.5 h-3.5" />
+          <MoreHorizontal className="w-3 h-3" />
         </button>
       )}
-    </button>
+    </div>
   )
 }

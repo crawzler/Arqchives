@@ -1,9 +1,9 @@
 'use client'
 
 import { useRef, useState, useEffect, useCallback } from 'react'
-import { Play, Pause, Volume2, VolumeX, Repeat, Music } from 'lucide-react'
+import { Play, Pause, Volume2, VolumeX, Repeat, Music, Shuffle } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { usePlaylistCurrentTrack, useActiveProject, usePlaylistCurrentIndex } from '@/store/useAppStore'
+import { usePlaylistCurrentTrack, useActiveProject, usePlaylistCurrentIndex, usePlaylistRepeat, usePlaylistShuffle, useSetRepeat, useSetShuffle } from '@/store/useAppStore'
 import { Waveform } from '@/components/player/Waveform'
 
 interface AudioPlayerProps {
@@ -21,12 +21,24 @@ export function AudioPlayer({ src, onEnded, className, onPlaylistPlay, isPlaying
   const currentTrack = usePlaylistCurrentTrack()
   const activeProject = useActiveProject()
   const currentIndex = usePlaylistCurrentIndex()
+  const repeat = usePlaylistRepeat()
+  const shuffle = usePlaylistShuffle()
+  const setRepeat = useSetRepeat()
+  const setShuffle = useSetShuffle()
   const trackInfo = currentTrack?.track
+  // Get duration from track metadata if available
+  const trackDuration = trackInfo?.duration
   const audioRef = useRef<HTMLAudioElement>(null)
   const [currentTime, setCurrentTime] = useState(0)
-  const [duration, setDuration] = useState(0)
+  const [duration, setDuration] = useState(trackDuration || 0)
+
+  // Sync duration from track metadata if audio hasn't loaded it yet
+  useEffect(() => {
+    if (trackDuration && duration === 0) {
+      setDuration(trackDuration)
+    }
+  }, [trackDuration, duration])
   const [volume, setVolume] = useState(1)
-  const [loop, setLoop] = useState(false)
   const [waveformReady, setWaveformReady] = useState(false)
 
   // Project accent color for play button styling
@@ -46,6 +58,14 @@ export function AudioPlayer({ src, onEnded, className, onPlaylistPlay, isPlaying
   isPlayingRef.current = isPlaying
   srcRef.current = src
   currentSrcRef.current = src
+
+  // Format time helper
+  const formatTime = (seconds: number) => {
+    if (!isFinite(seconds) || seconds < 0) return '0:00'
+    const mins = Math.floor(seconds / 60)
+    const secs = Math.floor(seconds % 60)
+    return `${mins}:${secs.toString().padStart(2, '0')}`
+  }
 
   /*
   const _normalizeSrc = useCallback((s: string) => s.replace(/%20/g, ' '), [])
@@ -89,7 +109,7 @@ export function AudioPlayer({ src, onEnded, className, onPlaylistPlay, isPlaying
     setWaveformReady(false)
     
     audio.src = src
-    audio.loop = loop
+    audio.loop = repeat === 'one'
     audio.load()
 
     // Update current source ref when src changes
@@ -102,8 +122,11 @@ export function AudioPlayer({ src, onEnded, className, onPlaylistPlay, isPlaying
     }
     const handleLoadedMetadata = () => {
       if (!mountedRef.current) return
-      setDuration(audio.duration)
-      dispatchGlobalEvent('arqchives:global-duration', { duration: audio.duration })
+      const dur = audio.duration
+      if (isFinite(dur) && dur > 0) {
+        setDuration(dur)
+        dispatchGlobalEvent('arqchives:global-duration', { duration: dur })
+      }
     }
     const handleEnded = () => {
       if (!mountedRef.current) return
@@ -153,7 +176,7 @@ export function AudioPlayer({ src, onEnded, className, onPlaylistPlay, isPlaying
       // NOTE: Do NOT pause or clear src here - let isPlaying effect control playback
       // This prevents UI interactions (sidebar collapse, etc.) from stopping playback
     }
-  }, [src, loop, onEnded, dispatchGlobalEvent])
+  }, [src, repeat, onEnded, dispatchGlobalEvent])
 
   // Sync playback with controlled isPlaying prop (from store) - SINGLE SOURCE OF TRUTH
   // DEPENDS ON `src` AND `waveformReady`: re-run when track changes or waveform ready
@@ -314,7 +337,7 @@ export function AudioPlayer({ src, onEnded, className, onPlaylistPlay, isPlaying
               )}
               <div className="min-w-0">
                 <p className="font-medium text-primary truncate text-body-sm flex items-center gap-xs">
-                  <span className="text-muted text-caption">{currentIndex + 1}.</span>
+                  <span className="text-muted text-caption">{trackInfo.number ? `${trackInfo.number}.` : `${currentIndex + 1}.`}</span>
                   {trackInfo.title}
                 </p>
                 {currentTrack?.album && (
@@ -326,6 +349,11 @@ export function AudioPlayer({ src, onEnded, className, onPlaylistPlay, isPlaying
             </div>
           )}
         </div>
+
+          {/* Time display */}
+          <div className="flex items-center gap-sm text-[11px] text-muted font-mono min-w-[80px] justify-end">
+            {formatTime(currentTime)} / {formatTime(duration)}
+          </div>
 
         {/* Transport Controls - Centered absolutely */}
         <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-sm">
@@ -367,15 +395,31 @@ export function AudioPlayer({ src, onEnded, className, onPlaylistPlay, isPlaying
           </button>
         </div>
 
-        {/* Right Controls: Repeat + Volume */}
+        {/* Right Controls: Shuffle + Repeat + Volume */}
         <div className="flex items-center gap-sm flex-shrink-0">
-          {/* Repeat */}
+          {/* Shuffle */}
           <button
-            onClick={() => setLoop(!loop)}
-            className={cn("w-8 h-8 radius-full flex items-center justify-center text-primary trans-colors focus-ring", loop && "bg-hover")}
-            title="Repetir"
+            onClick={() => setShuffle(!shuffle)}
+            className={cn("w-8 h-8 radius-full flex items-center justify-center trans-colors focus-ring", shuffle ? "text-primary" : "text-muted hover:text-primary hover:bg-hover")}
+            title={shuffle ? 'Aleatório ativado' : 'Aleatório'}
+            aria-pressed={shuffle}
+          >
+            <Shuffle className="w-3.5 h-3.5" />
+          </button>
+
+          {/* Repeat - 3 states: off, all, one */}
+          <button
+            onClick={() => setRepeat(repeat === 'off' ? 'all' : repeat === 'all' ? 'one' : 'off')}
+            className={cn("w-8 h-8 radius-full flex items-center justify-center trans-colors focus-ring relative", repeat !== 'off' ? "text-primary" : "text-muted hover:text-primary hover:bg-hover")}
+            title={repeat === 'off' ? 'Repetir desligado' : repeat === 'all' ? 'Repetir playlist' : 'Repetir faixa'}
+            aria-pressed={repeat !== 'off'}
           >
             <Repeat className="w-3.5 h-3.5" />
+            {repeat === 'one' && (
+              <span className="absolute top-[-2px] right-[-2px] w-5 h-5 flex items-center justify-center text-[9px] font-bold text-white bg-primary rounded-full">
+                1
+              </span>
+            )}
           </button>
 
           {/* Volume */}

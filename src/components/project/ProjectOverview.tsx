@@ -332,7 +332,7 @@ export default function ProjectOverview({ project }: { project: Project }) {
                 placeholder={isAlbumView ? "Buscar faixas..." : "Buscar álbuns..."}
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                className="w-64 sm:w-72 bg-neutral-900 border border-neutral-700 rounded-lg pl-10 pr-4 py-2 text-sm text-white placeholder:text-neutral-500 focus-ring"
+                className="w-64 sm:w-72 h-[var(--input-height)] bg-neutral-900 border border-neutral-700 rounded-lg pl-10 pr-4 text-sm text-white placeholder:text-neutral-500 focus-ring"
               />
             </div>
 
@@ -342,7 +342,7 @@ export default function ProjectOverview({ project }: { project: Project }) {
                 <select
                   value={filterType}
                   onChange={e => setFilterType(e.target.value as any)}
-                  className="bg-neutral-900 border border-neutral-700 rounded-lg px-3 py-2 text-sm text-white focus-ring appearance-none pr-8"
+                  className="h-[var(--input-height)] bg-neutral-900 border border-neutral-700 rounded-lg px-3 text-sm text-white focus-ring appearance-none pr-8"
                 >
                   <option value="all">Todos</option>
                   <option value="album">Álbum</option>
@@ -382,6 +382,7 @@ export default function ProjectOverview({ project }: { project: Project }) {
             {!isAlbumView && !isTrackView && (
               <Button
                 size="md"
+                className="h-[var(--input-height)]"
                 onClick={() => setShowNewAlbum(true)}
                 style={{ '--accent': project.accent } as React.CSSProperties }
               >
@@ -394,6 +395,7 @@ export default function ProjectOverview({ project }: { project: Project }) {
             {isAlbumView && !isTrackView && (
               <Button
                 size="md"
+                className="h-[var(--input-height)]"
                 onClick={() => {
                   // Dispatch event to AlbumDetailContent to open track modal
                   window.dispatchEvent(new CustomEvent('arqchives:new-track'))
@@ -410,7 +412,7 @@ export default function ProjectOverview({ project }: { project: Project }) {
 
       {/* Content - flex row: main content + playlist */}
       <div className="flex flex-1 overflow-hidden">
-        <main className="flex-1 overflow-auto p-4">
+        <main className="flex-1 overflow-hidden p-4">
           <AnimatePresence mode="wait">
             {/* Track Detail */}
             {selectedTrack && selectedAlbum && (

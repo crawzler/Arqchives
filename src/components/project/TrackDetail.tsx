@@ -1,11 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Volume2, VolumeX, Music2, FileText, MessageSquare, Brain, Settings, Sparkles, Edit2, Trash2, Plus, Loader2 } from 'lucide-react'
-import { useAppStore, useActiveProjectId, useTrack, useAlbum, usePlaylistCurrentTrack, usePlaylistIsPlaying, usePlaylistCurrentIndex } from '@/store/useAppStore'
+import { Music2, Edit2, Trash2, Play, Pause } from 'lucide-react'
+import { useAppStore, useActiveProjectId, useTrack, useAlbum, usePlaylistCurrentTrack, usePlaylistIsPlaying, useAddTracksToQueue } from '@/store/useAppStore'
 import { useFileOperations, useAlbumOperations } from '@/hooks/useAlbumOperations'
-import { cn, formatFileSize, generateId } from '@/lib/utils'
+import { cn, generateId } from '@/lib/utils'
 import { TRACK_STATUSES } from '@/types'
 import { TrackModal } from '@/components/modals/TrackModal'
 import { ConfirmModal } from '@/components/modals/ConfirmModal'
@@ -13,8 +13,6 @@ import { TrackFilesTab } from '@/components/project/TrackFilesTab'
 import { TrackSocialTab } from '@/components/project/TrackSocialTab'
 import { TrackTabs } from '@/components/project/TrackTabs'
 import { TrackAIInfoTab } from '@/components/project/TrackAIInfoTab'
-import { Waveform } from '@/components/player/Waveform'
-import { ContextMenu, useContextMenu } from '@/components/ui/ContextMenu'
 import { Button } from '@/components/ui/Button'
 
 import { Project } from '@/types'
@@ -30,9 +28,9 @@ export default function TrackDetail({ trackId, albumId, project, onBack, trackVi
   const track = useTrack(activeProjectId!, albumId, trackId)
   const album = useAlbum(activeProjectId!, albumId)
   const { updateTrack, deleteTrack, addTrackFile } = useAppStore()
-  const { getLocalUrl, revealFile, openFile, deleteFile, renameFile, ensureFolder, moveOrCopyFile } = useFileOperations()
+  const addTracksToQueue = useAddTracksToQueue()
+  const { getLocalUrl, deleteFile, ensureFolder, moveOrCopyFile } = useFileOperations()
   const { organizeFile, generateAlbumPaths } = useAlbumOperations()
-  const { open: openContextMenu } = useContextMenu()
 
   const [activeTab, setActiveTab] = useState<'player' | 'files' | 'social' | 'info'>('player')
   const [showEditModal, setShowEditModal] = useState(false)
@@ -120,13 +118,13 @@ export default function TrackDetail({ trackId, albumId, project, onBack, trackVi
     })
   }
 
-  const trackContextMenuItems = [
-    { label: 'Editar', icon: Edit2, onClick: () => setShowEditModal(true) },
-    { label: 'Adicionar versão Master', icon: Plus, onClick: () => handleAddVersion('master') },
-    { label: 'Adicionar versão Mix', icon: Plus, onClick: () => handleAddVersion('mix') },
-    { type: 'separator' as const },
-    { label: 'Deletar faixa', icon: Trash2, variant: 'danger' as const, onClick: () => setConfirmDelete(true) },
-  ]
+  // Format duration helper
+  const formatDuration = useCallback((seconds: number | null) => {
+    if (!seconds) return '--:--'
+    const mins = Math.floor(seconds / 60)
+    const secs = Math.floor(seconds % 60)
+    return `${mins}:${secs.toString().padStart(2, '0')}`
+  }, [])
 
   return (
     <div className="flex flex-col h-full bg-neutral-950">
@@ -148,13 +146,13 @@ export default function TrackDetail({ trackId, albumId, project, onBack, trackVi
       <motion.main
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex-1 min-h-0"
+        className="flex-1 overflow-hidden"
       >
         {activeTab === 'player' ? (
-          // Player tab: full height, no padding, no scroll
-          <TrackDetailPlayer
+          <TrackDetailOverview
             track={track}
             album={album}
+            project={project}
             projectColor={project.accent}
             audioPath={audioUrl}
             audioFilePath={audioPath}
@@ -166,6 +164,8 @@ export default function TrackDetail({ trackId, albumId, project, onBack, trackVi
             setActiveVersion={setActiveVersion}
             onEdit={() => setShowEditModal(true)}
             onDelete={() => setConfirmDelete(true)}
+            formatDuration={formatDuration}
+            addTracksToQueue={addTracksToQueue}
           />
         ) : (
           // Other tabs: with padding and scroll
@@ -227,10 +227,11 @@ export default function TrackDetail({ trackId, albumId, project, onBack, trackVi
   )
 }
 
-// ── Track Detail Player Component (compact controls for global player) ─────────────────────────────────
-function TrackDetailPlayer({ track, album, projectColor, audioPath, audioFilePath, audioVersion, coverSrc, onAddVersion, getLocalUrl, activeVersion, setActiveVersion, onEdit, onDelete }: {
+// ── Track Detail Overview Component ─────────────────────────────────
+interface TrackDetailOverviewProps {
   track: import('@/types').Track
   album: import('@/types').Album
+  project: import('@/types').Project
   projectColor: string
   audioPath: string
   audioFilePath: string | undefined
@@ -242,103 +243,39 @@ function TrackDetailPlayer({ track, album, projectColor, audioPath, audioFilePat
   setActiveVersion: (v: import('@/types').AudioVersion) => void
   onEdit?: () => void
   onDelete?: () => void
-}) {
-  const activeProjectId = useActiveProjectId()
-  
-  // Use global playlist state
+  formatDuration: (seconds: number | null) => string
+  addTracksToQueue: (tracks: import('@/types').PlaylistTrack[], options?: { replace?: boolean; playImmediately?: boolean }) => void
+}
+
+function TrackDetailOverview({
+  track,
+  album,
+  project,
+  projectColor,
+  audioPath,
+  audioFilePath,
+  audioVersion,
+  coverSrc,
+  onAddVersion,
+  getLocalUrl,
+  activeVersion,
+  setActiveVersion,
+  onEdit,
+  onDelete,
+  formatDuration,
+  addTracksToQueue,
+}: TrackDetailOverviewProps) {
   const currentTrack = usePlaylistCurrentTrack()
   const isPlaying = usePlaylistIsPlaying()
-  const currentIndex = usePlaylistCurrentIndex()
-  
-  // Check if this track is the currently playing one
+
   const isCurrentTrack = currentTrack && currentTrack.track.id === track.id
   const isPlayingThisTrack = isCurrentTrack && isPlaying
 
-  const [currentTime, setCurrentTime] = useState(0)
-  const [duration, setDuration] = useState(0)
-  const [volume, setVolume] = useState(1)
-  const [audioMetadata, setAudioMetadata] = useState<{ duration: number | null; size: number; ext: string } | null>(null)
   const [currentFilePath, setCurrentFilePath] = useState<string | undefined>(audioFilePath)
 
-  // Fetch audio metadata when currentFilePath changes (use actual file path, not file:// URL)
-  useEffect(() => {
-    if (currentFilePath) {
-      window.electronAPI?.getAudioMetadata(currentFilePath).then((result) => {
-        if (result) {
-          setAudioMetadata({
-            duration: result.duration,
-            size: result.size,
-            ext: currentFilePath.split('.').pop()?.toUpperCase() || ''
-          })
-        }
-      }).catch(() => {
-        // Ignore errors
-      })
-    } else {
-      setAudioMetadata(null)
-    }
-  }, [currentFilePath])
-
-  // Initialize currentFilePath from props
   useEffect(() => {
     setCurrentFilePath(audioFilePath)
   }, [audioFilePath])
-
-  // Listen to global player events for time/duration sync
-  useEffect(() => {
-    const handleGlobalTimeUpdate = (e: CustomEvent) => {
-      const { audioPath: globalAudioPath, time } = e.detail
-      if (globalAudioPath === audioPath) {
-        setCurrentTime(time)
-      }
-    }
-    const handleGlobalDuration = (e: CustomEvent) => {
-      const { audioPath: globalAudioPath, duration: globalDuration } = e.detail
-      if (globalAudioPath === audioPath) {
-        setDuration(globalDuration)
-      }
-    }
-    const handleGlobalEnded = (e: CustomEvent) => {
-      const { audioPath: globalAudioPath } = e.detail
-      if (globalAudioPath === audioPath) {
-        setCurrentTime(0)
-        setDuration(0)
-      }
-    }
-
-    window.addEventListener('arqchives:global-timeupdate', handleGlobalTimeUpdate as EventListener)
-    window.addEventListener('arqchives:global-duration', handleGlobalDuration as EventListener)
-    window.addEventListener('arqchives:audio-ended', handleGlobalEnded as EventListener)
-    
-    return () => {
-      window.removeEventListener('arqchives:global-timeupdate', handleGlobalTimeUpdate as EventListener)
-      window.removeEventListener('arqchives:global-duration', handleGlobalDuration as EventListener)
-      window.removeEventListener('arqchives:audio-ended', handleGlobalEnded as EventListener)
-    }
-  }, [audioPath])
-
-  const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const vol = parseFloat(e.target.value)
-    // Dispatch to global player
-    window.dispatchEvent(new CustomEvent('arqchives:global-volume', { detail: { audioPath, volume: vol } }))
-    setVolume(vol)
-  }
-
-  if (!audioPath) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full min-h-[60vh] text-center p-8">
-        <div className="w-48 h-48 rounded-2xl bg-gradient-to-br from-neutral-800 to-neutral-900 border border-neutral-700 flex items-center justify-center mb-8 mx-auto relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent" />
-          <Music2 className="w-20 h-20 text-neutral-600 relative z-10" />
-        </div>
-        <h3 className="text-2xl font-medium text-white mb-3">Nenhum arquivo de áudio</h3>
-        <p className="text-neutral-500 mb-8 max-w-md text-center">Adicione uma versão de áudio na aba Arquivos ou edite a track para começar a reproduzir.</p>
-        <Button onClick={() => { /* trigger edit modal */ }} size="lg" style={{ '--accent': projectColor }}>
-          Adicionar áudio
-        </Button>
-      </div>
-    )
-  }
 
   const versionColors: Record<string, string> = {
     master: '#22c55e',
@@ -349,254 +286,230 @@ function TrackDetailPlayer({ track, album, projectColor, audioPath, audioFilePat
     other: '#ffffff',
   }
 
-  // Consistent chip color: use projectColor for active, neutral for inactive
-  // Type indicator dot uses versionColors but chips don't clash
   const getChipStyle = (v: import('@/types').AudioVersion, isActive: boolean) => {
     if (isActive) {
-      return {
-        backgroundColor: projectColor,
-        borderColor: 'transparent',
-        color: '#000000',
-      }
+      return { backgroundColor: projectColor, borderColor: 'transparent', color: '#000000' }
     }
-    return {
-      backgroundColor: 'rgba(255,255,255,0.03)',
-      borderColor: 'rgba(255,255,255,0.06)',
-      color: '#ffffff',
-    }
+    return { backgroundColor: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.06)', color: '#ffffff' }
   }
 
-  const isActiveVersion = (v: import('@/types').AudioVersion) => 
+  const isActiveVersion = (v: import('@/types').AudioVersion) =>
     activeVersion?.id === v.id || (!activeVersion && v.id === track.audioVersions?.[0]?.id)
 
+  if (!audioPath) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full min-h-[60vh] text-center p-8">
+        <div className="w-48 h-48 rounded-2xl bg-gradient-to-br from-neutral-800 to-neutral-900 border border-neutral-700 flex items-center justify-center mb-8 mx-auto relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent" />
+          <Music2 className="w-20 h-20 text-neutral-600 relative z-10" />
+        </div>
+        <h3 className="text-2xl font-medium text-white mb-3">Nenhum arquivo de áudio</h3>
+        <p className="text-neutral-500 mb-8 max-w-md text-center">Adicione uma versão de áudio na aba Arquivos ou edite a track para começar a reproduzir.</p>
+        <Button onClick={onEdit} size="lg" style={{ '--accent': projectColor }}>
+          Adicionar áudio
+        </Button>
+      </div>
+    )
+  }
+
   return (
-    <div className="flex flex-col h-full min-h-0">
-      {/* Hero Section - Cover Left + Info Center + Versions Right */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="relative flex-shrink-0 px-4 md:px-6 py-8"
-      >
-        <div className="relative z-10 max-w-7xl mx-auto">
-          <div className="flex flex-col md:flex-row items-start md:items-center gap-4 md:gap-6">
-            {/* Cover Art - Rectangle (no play button overlay) */}
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              className="flex-shrink-0"
-            >
-              <div className="relative w-56 h-56 md:w-64 md:h-64 rounded-2xl overflow-hidden shadow-2xl border border-white/5">
-                {coverSrc ? (
-                  <img src={coverSrc} alt={track.title} className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-neutral-800 to-neutral-900">
-                    <Music2 className="w-18 h-18 text-neutral-500" />
+    <div className="flex flex-col h-full bg-neutral-950">
+      <div className="flex-1 overflow-hidden">
+        <div className="max-w-7xl mx-auto w-full px-4 md:px-8 lg:px-12 py-8 h-full flex flex-col">
+          {/* ── HEADER ZONE: Track Title Only (centered) ── */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="relative mb-12 md:mb-16"
+          >
+            <div className="relative max-w-4xl mx-auto">
+              {/* Background glow */}
+              <div className="absolute inset-0 -z-10" aria-hidden="true">
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[350px] rounded-full blur-3xl opacity-10"
+                  style={{ backgroundColor: projectColor }} />
+              </div>
+
+              <div className="relative z-10 text-center">
+                {/* Track title with number - larger */}
+                <h1 className="text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-white leading-[1.1] tracking-tight">
+                  {track.number ? `${track.number}. ` : ''}{track.title}
+                </h1>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* ── CANVAS + SIDEBAR: Cover | Versions ── */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="relative"
+          >
+            <div className="relative max-w-7xl mx-auto">
+              {/* Background glow */}
+              <div className="absolute inset-0 -z-10" aria-hidden="true">
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[700px] h-[700px] rounded-full blur-3xl opacity-10"
+                  style={{ backgroundColor: projectColor }} />
+              </div>
+
+              <div className="relative z-10 grid lg:grid-cols-[1fr_1fr] gap-10 md:gap-16 items-stretch flex-1 min-h-0">
+                {/* CANVAS: Cover art - centered in left column */}
+                <motion.div
+                  initial={{ scale: 0.95, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  className="flex flex-col items-center"
+                >
+                  <div className="relative aspect-square max-w-[360px] w-full rounded-2xl overflow-hidden shadow-2xl border border-white/5">
+                    {coverSrc ? (
+                      <img src={coverSrc} alt={track.title} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-neutral-800 to-neutral-900">
+                        <Music2 className="w-24 h-24 md:w-32 md:h-32 text-neutral-500" />
+                      </div>
+                    )}
+                    {/* Playing ring indicator */}
+                    {isPlayingThisTrack && (
+                      <>
+                        <motion.div
+                          animate={{ scale: [1, 1.15], opacity: [0.35, 0] }}
+                          transition={{ duration: 2, repeat: Infinity, ease: 'easeOut' }}
+                          className="absolute inset-0 rounded-2xl border-2"
+                          style={{ borderColor: projectColor }} />
+                        <motion.div
+                          animate={{ scale: [1, 1.3], opacity: [0.25, 0] }}
+                          transition={{ duration: 2, repeat: Infinity, ease: 'easeOut', delay: 0.6 }}
+                          className="absolute inset-0 rounded-2xl border-2"
+                          style={{ borderColor: projectColor }} />
+                        <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+                          <div className="w-16 h-16 rounded-full bg-white/90 flex items-center justify-center animate-pulse">
+                            <Pause className="w-7 h-7 text-black ml-1" />
+                          </div>
+                        </div>
+                      </>
+                    )}
                   </div>
+                </motion.div>
+
+                {/* SIDEBAR: Versions panel */}
+                {track.audioVersions && track.audioVersions.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.15 }}
+                    className="flex-shrink-0 w-full"
+                  >
+                    <div className="bg-neutral-900/60 backdrop-blur-sm border border-white/5 rounded-2xl p-4 md:p-5 h-full flex flex-col">
+                      <div className="flex items-center justify-between mb-4">
+                        <p className="text-xs font-medium text-neutral-400 uppercase tracking-wider">Versões</p>
+                        {track.versionMode === 'dual' && (
+                          <Button variant="ghost" size="sm" onClick={() => onAddVersion('master')} className="gap-1.5">
+                            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <line x1="12" y1="5" x2="12" y2="19"/>
+                              <line x1="5" y1="12" x2="19" y2="12"/>
+                            </svg>
+                            <span className="text-xs">+ Master</span>
+                          </Button>
+                        )}
+                      </div>
+                      <div className="flex flex-col gap-2 flex-1 min-h-0 overflow-y-auto pr-1">
+                        {track.audioVersions.map(v => (
+                          <button
+                            key={v.id}
+                            onClick={async () => {
+                              setActiveVersion(v)
+                              const url = await getLocalUrl(v.path)
+                              if (url) {
+                                setCurrentFilePath(v.path)
+                                addTracksToQueue([{
+                                  track,
+                                  album,
+                                  project,
+                                  audioVersion: v,
+                                  audioPath: url,
+                                }], { replace: true, playImmediately: true })
+                                // Dispatch event so App.tsx opens player and sets audioSrc
+                                window.dispatchEvent(new CustomEvent('arqchives:playlist-play', {
+                                  detail: { audioPath: url, index: 0, item: { track, album, project, audioVersion: v, audioPath: v.path } }
+                                }))
+                              }
+                            }}
+                            className={cn(
+                              "relative px-4 py-3 rounded-xl text-sm font-medium transition-all text-left w-full overflow-hidden",
+                              isActiveVersion(v) ? "shadow-lg" : "hover:bg-white/5 before:hidden",
+                              "before:absolute before:inset-0 before:bg-gradient-to-r before:from-transparent before:via-white/5 before:to-transparent before:-translate-x-full hover:before:translate-x-full before:transition-transform before:duration-300"
+                            )}
+                            style={getChipStyle(v, isActiveVersion(v))}
+                          >
+                            <div className="flex items-center gap-3 relative z-10">
+                              <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: versionColors[v.type] || '#64748b' }} />
+                              <span className="capitalize truncate flex-1">{v.label}</span>
+                              <span className="text-[9px] px-2 py-0.5 rounded-full font-medium flex-shrink-0"
+                                style={{
+                                  backgroundColor: isActiveVersion(v) ? 'rgba(0,0,0,0.15)' : `${versionColors[v.type] || '#64748b'}25`,
+                                  color: isActiveVersion(v) ? 'rgba(0,0,0,0.6)' : versionColors[v.type] || '#64748b'
+                                }}
+                              >
+                                {v.type}
+                              </span>
+                            </div>
+                            {isActiveVersion(v) && (
+                              <div className="absolute bottom-0 left-0 right-0 h-1" style={{ backgroundColor: projectColor }} />
+                            )}
+                            {isActiveVersion(v) && (
+                              <div className="mt-3 pt-3 border-t border-white/10 flex items-center gap-2 text-xs text-black relative z-10">
+                                <Play className="w-3.5 h-3.5" />
+                                <span className="truncate font-medium">Ouvir track</span>
+                              </div>
+                            )}
+                          </button>
+                        ))}
+                        {/* Album + Track Info at bottom of panel */}
+                        <div className="mt-6 pt-6 border-t border-white/10 px-2 space-y-3">
+                          <div className="flex flex-wrap items-center justify-between gap-3">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-medium px-2 py-0.5 rounded bg-white/10 uppercase tracking-wider"
+                                style={{ borderColor: `${projectColor}40`, borderWidth: '1px', borderStyle: 'solid' }}>
+                                {album.type}
+                              </span>
+                              <span className="w-px h-3 bg-neutral-600" />
+                              <span className="text-xs font-mono text-neutral-400">{album.year}</span>
+                              <span className="w-px h-3 bg-neutral-600" />
+                              <span className="text-xs text-neutral-400 truncate max-w-[180px]">{album.title}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-medium uppercase tracking-wider"
+                                style={{
+                                  backgroundColor: `${TRACK_STATUSES[track.status].color}25`,
+                                  color: TRACK_STATUSES[track.status].color,
+                                  border: `1px solid ${TRACK_STATUSES[track.status].color}40`
+                                }}
+                              >
+                                {TRACK_STATUSES[track.status].label}
+                              </span>
+                              {track.bpm && (
+                                <span className="flex items-center gap-1 text-neutral-400">
+                                  <Music2 className="w-3 h-3" />
+                                  <span className="font-mono">{track.bpm} BPM</span>
+                                </span>
+                              )}
+                              {track.key && (
+                                <span className="flex items-center gap-1 text-neutral-400">
+                                  <span className="text-xs">🎹</span>
+                                  <span className="font-mono">{track.key}</span>
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
                 )}
               </div>
-            </motion.div>
-
-            {/* Track Info - Center flex-1 */}
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.05 }}
-              className="flex-1 min-w-0 text-center md:text-left"
-            >
-              <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 mb-2">
-                <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-white/10 text-neutral-300 uppercase tracking-wide">
-                  {album.type}
-                </span>
-                <span className="text-xs text-neutral-500">·</span>
-                <span className="text-xs font-mono text-neutral-400">{album.year}</span>
-                <span className="text-xs text-neutral-500">·</span>
-                <span className="text-xs text-neutral-400 truncate max-w-[180px]">{album.title}</span>
-              </div>
-              
-              <h1 className="text-2xl md:text-3xl font-bold text-white truncate mb-1.5 leading-tight">
-                {track.title}
-              </h1>
-              
-              <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 text-sm text-neutral-400 mb-3">
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-medium uppercase tracking-wide"
-                  style={{
-                    backgroundColor: `${TRACK_STATUSES[track.status].color}33`,
-                    color: TRACK_STATUSES[track.status].color,
-                    border: `1px solid ${TRACK_STATUSES[track.status].color}50`
-                  }}
-                >
-                  {TRACK_STATUSES[track.status].label}
-                </span>
-              </div>
-
-              {(track.bpm || track.key) && (
-                <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 text-xs">
-                  {track.bpm && (
-                    <span className="flex items-center gap-1 px-3 py-1 bg-white/5 rounded-full text-neutral-300">
-                      <Music2 className="w-3.5 h-3.5" />
-                      {track.bpm} BPM
-                    </span>
-                  )}
-                  {track.key && (
-                    <span className="flex items-center gap-1 px-3 py-1 bg-white/5 rounded-full text-neutral-300">
-                      <span className="text-base">🎹</span>
-                      {track.key}
-                    </span>
-                  )}
-                </div>
-              )}
-
-              {/* Audio Metadata - Size, Extension (duration shown in timeline) */}
-              {audioMetadata && (
-                <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 text-xs mt-2">
-                  {audioMetadata.size && (
-                    <span className="flex items-center gap-1 px-3 py-1 bg-white/5 rounded-full text-neutral-300">
-                      {audioMetadata.size >= 1024 * 1024 
-                        ? `${(audioMetadata.size / 1024 / 1024).toFixed(1)} MB`
-                        : `${Math.round(audioMetadata.size / 1024)} KB`}
-                    </span>
-                  )}
-                  {audioMetadata.ext && (
-                    <span className="flex items-center gap-1 px-3 py-1 bg-white/5 rounded-full text-neutral-300 font-mono">
-                      {audioMetadata.ext}
-                    </span>
-                  )}
-                </div>
-              )}
-
-              {/* Edit & Delete Buttons */}
-              <div className="mt-3 flex items-center gap-2">
-                <button
-                  onClick={onEdit}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-neutral-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
-                  title="Editar faixa"
-                >
-                  <Edit2 className="w-3.5 h-3.5" />
-                  <span className="text-xs font-medium">Editar</span>
-                </button>
-                <button
-                  onClick={onDelete}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-neutral-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
-                  title="Excluir faixa"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  <span className="text-xs font-medium">Excluir</span>
-                </button>
-              </div>
-            </motion.div>
-
-            {/* Versions - Right side of Hero */}
-            {track.audioVersions && track.audioVersions.length > 0 && (
-              <motion.div
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.1 }}
-                className="flex-shrink-0 w-full md:w-72 lg:w-80"
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <p className="text-xs font-medium text-neutral-400 uppercase tracking-wide">Versões</p>
-                  {track.versionMode === 'dual' && (
-                    <Button variant="ghost" size="sm" onClick={() => onAddVersion('master')}>
-                      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <line x1="12" y1="5" x2="12" y2="19"/>
-                        <line x1="5" y1="12" x2="19" y2="12"/>
-                      </svg>
-                      <span className="text-xs">+ Master</span>
-                    </Button>
-                  )}
-                </div>
-                <div className="flex flex-col gap-1.5 max-h-48 overflow-y-auto pr-1">
-                  {track.audioVersions.map(v => (
-                    <button
-                      key={v.id}
-                      onClick={async () => { 
-                        setActiveVersion(v); 
-                        // Dispatch to global player to switch version
-                        if (v.path !== audioPath) {
-                          const url = await getLocalUrl(v.path)
-                          if (url) {
-                            setCurrentFilePath(v.path)
-                            window.dispatchEvent(new CustomEvent('arqchives:playlist-play', { 
-                              detail: { audioPath: url, item: { track, album, audioVersion: v, audioPath: v.path }, index: currentIndex >= 0 ? currentIndex : 0 } 
-                            }))
-                          }
-                        }
-                      }}
-                      className={cn(
-                        "px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap text-left w-full",
-                        isActiveVersion(v) ? "shadow-md" : "hover:bg-white/5"
-                      )}
-                      style={getChipStyle(v, isActiveVersion(v))}
-                    >
-                      <span className="flex items-center gap-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: versionColors[v.type] || '#64748b' }} />
-                        <span className="capitalize text-sm truncate">{v.label}</span>
-                        <span className="text-[9px] px-1.5 py-0.5 rounded-full ml-auto"
-                          style={{ 
-                            backgroundColor: isActiveVersion(v) ? 'rgba(0,0,0,0.15)' : `${versionColors[v.type] || '#64748b'}25`,
-                            color: isActiveVersion(v) ? 'rgba(0,0,0,0.6)' : versionColors[v.type] || '#64748b'
-                          }}
-                        >
-                          {v.type}
-                        </span>
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </motion.div>
-            )}
-          </div>
+            </div>
+          </motion.div>
         </div>
-      </motion.div>
-
-      {/* Waveform & Controls Section - fills remaining space, no scroll */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.15 }}
-        className="flex-1 flex flex-col min-h-0 px-4 md:px-6 pb-6 max-w-7xl mx-auto w-full"
-      >
-        {/* Volume bar above waveform - Far right */}
-        <div className="mb-3 flex justify-end">
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => { /* mute toggle handled by global player */ }}
-              className="w-8 h-8 rounded-full text-neutral-500 hover:text-white transition-colors"
-              aria-label={volume === 0 ? 'Ativar som' : 'Mutar'}
-            >
-              {volume === 0 ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-            </button>
-            <input
-              type="range"
-              min={0}
-              max={1}
-              step={0.05}
-              value={volume}
-              onChange={handleVolumeChange}
-              className="volume-slider w-40 h-5 cursor-pointer"
-              style={{
-                background: `linear-gradient(to right, ${projectColor} ${volume * 100}%, rgba(255,255,255,0.05) 0%)`,
-              }}
-            />
-          </div>
-        </div>
-
-        {/* Waveform - visual only (seek handled by global player) */}
-        <div className="relative mb-5 flex-shrink-0">
-          <div className="bg-neutral-900/40 border rounded-xl p-3 md:p-4"
-            style={{ borderColor: `${projectColor}25` }}
-          >
-            <Waveform
-              audioPath={audioPath}
-              currentTime={currentTime}
-              duration={duration}
-              color={projectColor}
-              height={80}
-              isPlaying={isPlaying}
-            />
-          </div>
-        </div>
-      </motion.div>
+      </div>
     </div>
   )
 }

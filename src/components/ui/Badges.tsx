@@ -14,10 +14,21 @@ interface StatusBadgeProps {
   showDot?: boolean
 }
 
+// Map TrackStatus to token status colors
+const STATUS_TOKEN_MAP: Record<keyof typeof TRACK_STATUSES, string> = {
+  idea: 'idea',
+  composing: 'planned',
+  recording: 'in_progress',
+  mixing: 'in_progress',
+  mastering: 'planned',
+  done: 'completed',
+}
+
 export function StatusBadge({ status, size = 'sm', showLabel = true, showDot = true }: StatusBadgeProps) {
   const info = TRACK_STATUSES[status]
   if (!info) return null
 
+  const tokenStatus = STATUS_TOKEN_MAP[status]
   const label = showLabel ? info.label.split(' ')[1] || info.label : ''
   const dotSize = size === 'sm' ? 'w-1.5 h-1.5' : 'w-2 h-2'
   const textSize = size === 'sm' ? 'text-[10px]' : 'text-xs'
@@ -27,15 +38,15 @@ export function StatusBadge({ status, size = 'sm', showLabel = true, showDot = t
     <span
       className={cn(
         'inline-flex items-center gap-1 font-medium uppercase tracking-wide',
-        'bg-neutral-900/50 backdrop-blur-sm border',
+        'bg-subtle backdrop-blur-sm border',
         padding,
         'rounded-full',
         textSize,
-        `border-${info.color}-500/40 text-${info.color}-400`
+        `border-status-${tokenStatus}/40 text-status-${tokenStatus}`
       )}
-      style={{ backgroundColor: `hsl(var(--color-status-${status}) / 0.15)` }}
+      style={{ backgroundColor: `hsl(var(--color-status-${tokenStatus}) / 0.15)` }}
     >
-      {showDot && <span className={cn('rounded-full', dotSize)} style={{ backgroundColor: `hsl(var(--color-status-${status}))` }} />}
+      {showDot && <span className={cn('rounded-full', dotSize)} style={{ backgroundColor: `hsl(var(--color-status-${tokenStatus}))` }} />}
       {label && <span>{label}</span>}
     </span>
   )
@@ -50,14 +61,14 @@ interface TypeBadgeProps {
 }
 
 const TYPE_COLORS: Record<string, string> = {
-  'Álbum': 'blue',
-  'EP': 'emerald',
-  'Single': 'violet',
-  'Compilação': 'amber',
+  'Álbum': 'album',
+  'EP': 'ep',
+  'Single': 'single',
+  'Compilação': 'compilation',
 }
 
 export function TypeBadge({ type, size = 'sm' }: TypeBadgeProps) {
-  const color = TYPE_COLORS[type] || 'neutral'
+  const color = TYPE_COLORS[type] || 'album'
   const textSize = size === 'sm' ? 'text-[10px]' : 'text-xs'
   const padding = size === 'sm' ? 'px-2 py-1' : 'px-2.5 py-1'
 
@@ -65,13 +76,13 @@ export function TypeBadge({ type, size = 'sm' }: TypeBadgeProps) {
     <span
       className={cn(
         'inline-flex items-center gap-1 font-medium uppercase tracking-wide whitespace-nowrap',
-        'bg-neutral-900/50 backdrop-blur-sm border',
+        'bg-subtle backdrop-blur-sm border',
         padding,
         'rounded-full',
         textSize,
-        `border-${color}-500/40 text-${color}-400`
+        `border-type-${color}/40 text-type-${color}`
       )}
-      style={{ backgroundColor: `hsl(var(--color-type-${type.toLowerCase().replace('ã', 'a').replace('ç', 'c')} || var(--color-type-album)) / 0.15)` }}
+      style={{ backgroundColor: `hsl(var(--color-type-${color}) / 0.15)` }}
     >
       {type}
     </span>
@@ -99,21 +110,8 @@ const FOLDER_ICONS: Record<string, React.ReactNode> = {
   references: '🔗',
 }
 
-const FOLDER_COLORS: Record<string, string> = {
-  artwork: 'pink',
-  masters: 'emerald',
-  extras: 'amber',
-  audio: 'blue',
-  stems: 'violet',
-  projects: 'orange',
-  lyrics: 'green',
-  videos: 'red',
-  references: 'cyan',
-}
-
 export function FolderIcon({ folderName, size = 'md', className }: FolderIconProps) {
   const icon = FOLDER_ICONS[folderName] || '📁'
-  const color = FOLDER_COLORS[folderName] || 'neutral'
   const iconSize = size === 'sm' ? 'w-4 h-4' : size === 'md' ? 'w-5 h-5' : 'w-6 h-6'
 
   return (

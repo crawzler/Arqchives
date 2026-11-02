@@ -69,15 +69,18 @@ export function TrackCard({ track, index, projectColor, albumCover, onOpen, onCo
   const trackNumber = track.number || index
 
   return (
-    <motion.button
+    <motion.div
+      role="button"
+      tabIndex={0}
       onClick={onOpen}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(); } }}
       onContextMenu={onContextMenu}
       whileHover={{ y: -4 }}
       whileTap={{ scale: 0.98 }}
       className={cn(
         "flex flex-col rounded-xl",
-        "bg-elevated/50 border border-subtle cursor-pointer",
-        "hover:border-muted hover:bg-elevated trans-all",
+        "bg-elevated border border-subtle cursor-pointer",
+        "hover:border-muted hover:bg-elevated/80 trans-all",
         "group relative overflow-hidden focus-ring"
       )}
       style={{ borderColor: `hsl(var(--color-border-default) / var(--project-color-muted))` }}
@@ -146,6 +149,6 @@ export function TrackCard({ track, index, projectColor, albumCover, onOpen, onCo
           </button>
         )}
       </div>
-    </motion.button>
+    </motion.div>
   )
 }

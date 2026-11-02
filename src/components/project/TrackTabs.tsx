@@ -13,7 +13,7 @@ interface TrackTabsProps {
 
 export function TrackTabs({ activeTab, onChange, projectColor, hasAudio }: TrackTabsProps) {
   const tabs = [
-    { id: 'player' as const, label: 'Player', icon: Music2, disabled: !hasAudio },
+    { id: 'player' as const, label: 'Visão Geral', icon: Music2, disabled: !hasAudio },
     { id: 'files' as const, label: 'Arquivos', icon: FileText },
     { id: 'social' as const, label: 'Social', icon: MessageSquare },
     { id: 'info' as const, label: 'Informações', icon: Info },
