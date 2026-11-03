@@ -13,7 +13,7 @@ export function AppIcon({ size = 24, className, alt = 'Arqchives' }: AppIconProp
   
   return (
     <img
-      src="/icon.png"
+      src="./icon.png"
       alt={alt}
       className={cn('object-contain', className)}
       style={{ width: sizeValue, height: sizeValue }}
@@ -27,7 +27,7 @@ export function AppIconLarge({ size = 48, className }: { size?: number | string;
   
   return (
     <img
-      src="/icon.png"
+      src="./icon.png"
       alt="Arqchives"
       className={cn('object-contain drop-shadow-lg', className)}
       style={{ width: sizeValue, height: sizeValue }}

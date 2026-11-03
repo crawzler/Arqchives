@@ -25,7 +25,8 @@ interface ElectronAPI {
   getLocalUrl: (filePath: string) => Promise<string | null>
   dragOutFile: (filePath: string) => void
   getAudioMetadata: (filePath: string) => Promise<{ duration: number | null; size: number }>
-  readAudioFile: (filePath: string) => Promise<ArrayBuffer | null>
+  readAudioFile: (filePath: string) => Promise<ArrayBuffer | Uint8Array | null>
+  debugLog: (message: string, data?: unknown) => Promise<boolean>
 
   // Store
   storeRead: (fileName: string) => Promise<string | null>

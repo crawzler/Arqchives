@@ -53,7 +53,7 @@ const electronStorage = {
   },
   removeItem: async (name: string): Promise<void> => {
     if (typeof window !== 'undefined' && window.electronAPI) {
-      await window.electronAPI.storeWrite(name, '')
+      await window.electronAPI.storeRemove(name)
     } else {
       localStorage.removeItem(name)
     }
@@ -126,14 +126,27 @@ export const useAppStore = create<AppState>()(
       appRoot: null,
       setAppRoot: (path: string) => set({ appRoot: path }),
       clearAppRoot: () => set({ appRoot: null }),
-      resetApp: () => set({
-        appRoot: null,
-        projects: DEFAULT_PROJECTS,
-        activeProjectId: null,
-        projectConfig: DEFAULT_PROJECT_CONFIG,
-        albums: {},
-        isLoading: false,
-      }),
+      resetApp: async () => {
+        // Clear persisted storage
+        if (typeof window !== 'undefined' && window.electronAPI) {
+          await window.electronAPI.storeRemove('arqchives-store')
+        }
+        set({
+          appRoot: null,
+          projects: DEFAULT_PROJECTS,
+          activeProjectId: null,
+          projectConfig: DEFAULT_PROJECT_CONFIG,
+          albums: {},
+          // Playlist state
+          queue: [],
+          currentIndex: -1,
+          isPlaying: false,
+          repeat: 'off',
+          shuffle: false,
+          isOpen: false,
+          isLoading: false,
+        })
+      },
 
       // ── Projects ──────────────────────────────────────────────────────────────
       projects: DEFAULT_PROJECTS,
@@ -684,8 +697,14 @@ export const useAppStore = create<AppState>()(
         activeProjectId: state.activeProjectId,
         projectConfig: state.projectConfig,
         albums: state.albums,
+        // Playlist UI state (NOT queue - contains runtime file:// URLs and nested objects)
+        currentIndex: state.currentIndex,
+        isPlaying: state.isPlaying,
+        repeat: state.repeat,
+        shuffle: state.shuffle,
+        isOpen: state.isOpen,
       }),
-      version: 2,
+      version: 4,
       migrate: (persistedState: any, version: number) => {
         if (version === 1) {
           // Migração da v1 para v2 - adicionar projetos padrão se não existirem
@@ -693,6 +712,27 @@ export const useAppStore = create<AppState>()(
             ...persistedState,
             projects: persistedState.projects?.length ? persistedState.projects : DEFAULT_PROJECTS,
             activeProjectId: persistedState.activeProjectId || 'moab',
+          }
+        }
+        if (version === 2) {
+          // Migração da v2 para v3 - adicionar playlist state defaults
+          return {
+            ...persistedState,
+            queue: persistedState.queue || [],
+            currentIndex: persistedState.currentIndex ?? -1,
+            isPlaying: persistedState.isPlaying ?? false,
+            repeat: persistedState.repeat ?? 'off',
+            shuffle: persistedState.shuffle ?? false,
+            isOpen: persistedState.isOpen ?? false,
+          }
+        }
+        if (version === 3) {
+          // Migração da v3 para v4 - remover queue do persist (contém URLs file:// runtime)
+          const { queue, ...rest } = persistedState
+          return {
+            ...rest,
+            currentIndex: -1,
+            isPlaying: false,
           }
         }
         return persistedState as AppState

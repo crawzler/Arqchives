@@ -31,7 +31,25 @@ function fileUrlToPath(url: string): string {
   }
 }
 
+function resolveCanvasColor(color: string): string {
+  const rootStyle = getComputedStyle(document.documentElement)
+  let resolved = color
+
+  for (let i = 0; i < 10 && resolved.includes('var('); i++) {
+    resolved = resolved.replace(
+      /var\((--[\w-]+)(?:,\s*([^)]+))?\)/g,
+      (_match, variable: string, fallback?: string) =>
+        rootStyle.getPropertyValue(variable).trim() || fallback?.trim() || ''
+    )
+  }
+
+  return resolved
+}
+
 export function Waveform({ audioPath, currentTime, duration, color = 'hsl(var(--color-waveform-progress))', height = 80, className, onSeek, isPlaying, onReady }: WaveformProps) {
+  // Debug log via IPC
+  window.electronAPI?.debugLog('[Waveform] Render', { audioPath: audioPath?.substring(0, 50) })
+  console.log('[Waveform] Render, audioPath:', audioPath)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [peaks, setPeaks] = useState<Float32Array | null>(null)
   const [decodedDuration, setDecodedDuration] = useState(0)
@@ -46,25 +64,57 @@ export function Waveform({ audioPath, currentTime, duration, color = 'hsl(var(--
   }, [onReady])
 
   useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas || !audioPath) return
-
+    console.log('[Waveform] Effect triggered, audioPath:', audioPath, 'canvas:', canvasRef.current)
+    window.electronAPI?.debugLog('[Waveform] Effect triggered', { audioPath, hasCanvas: !!canvasRef.current })
     let cancelled = false
+    const canvas = canvasRef.current
+    if (!audioPath) return
+    setPeaks(null)
+    setDecodedDuration(0)
+    // Wait for canvas to be ready
+    if (!canvas) {
+      console.log('[Waveform] Canvas not ready, scheduling retry')
+      window.electronAPI?.debugLog('[Waveform] Canvas not ready, scheduling retry')
+      requestAnimationFrame(() => {
+        if (canvasRef.current && !cancelled) generateWaveform()
+      })
+      return
+    }
     setIsGenerating(true)
     readyCalledRef.current = false
 
     async function generateWaveform() {
+      let audioCtx: AudioContext | null = null
       try {
-        const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)()
+        console.log('[Waveform] Starting generateWaveform for:', audioPath)
+        window.electronAPI?.debugLog('[Waveform] Starting generateWaveform', { audioPath })
         const filePath = fileUrlToPath(audioPath)
-        const arrayBuffer = await window.electronAPI?.readAudioFile(filePath)
+        console.log('[Waveform] filePath:', filePath)
+        window.electronAPI?.debugLog('[Waveform] filePath', { filePath })
+        const fileData = await window.electronAPI?.readAudioFile(filePath)
+        console.log('[Waveform] Audio data:', fileData ? `${fileData.byteLength} bytes` : 'unavailable')
+        window.electronAPI?.debugLog('[Waveform] Audio data received', {
+          byteLength: fileData?.byteLength ?? 0,
+          isArrayBuffer: fileData instanceof ArrayBuffer,
+        })
 
-        if (!arrayBuffer) {
+        if (!fileData) {
+          console.error('[Waveform] No audio data returned for', filePath)
           if (!cancelled) setIsGenerating(false)
+          if (!readyCalledRef.current && onReadyRef.current) {
+            readyCalledRef.current = true
+            onReadyRef.current()
+          }
           return
         }
 
-        const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer)
+        const audioData = fileData instanceof ArrayBuffer
+          ? fileData.slice(0)
+          : Uint8Array.from(fileData).buffer
+        audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)()
+        const audioBuffer = await audioCtx.decodeAudioData(audioData)
+        console.log('[Waveform] decodeAudioData success, duration:', audioBuffer.duration)
+        window.electronAPI?.debugLog('[Waveform] decodeAudioData success', { duration: audioBuffer.duration })
 
         if (cancelled) return
 
@@ -108,13 +158,28 @@ export function Waveform({ audioPath, currentTime, duration, color = 'hsl(var(--
           setIsGenerating(false)
           if (!readyCalledRef.current && onReadyRef.current) {
             readyCalledRef.current = true
+            console.log('[Waveform] Calling onReady')
+            window.electronAPI?.debugLog('[Waveform] Calling onReady')
             onReadyRef.current()
           }
         }
 
-        audioCtx.close()
       } catch (error) {
-        if (!cancelled) setIsGenerating(false)
+        console.error('[Waveform] Failed to generate waveform', { audioPath, error })
+        if (!cancelled) {
+          setIsGenerating(false)
+          // Call onReady even on error so playback can proceed
+          if (!readyCalledRef.current && onReadyRef.current) {
+            readyCalledRef.current = true
+            console.log('[Waveform] Calling onReady (error path)')
+            window.electronAPI?.debugLog('[Waveform] Calling onReady (error path)', { error: String(error) })
+            onReadyRef.current()
+          }
+        }
+      } finally {
+        if (audioCtx && audioCtx.state !== 'closed') {
+          await audioCtx.close()
+        }
       }
     }
 
@@ -201,16 +266,14 @@ export function Waveform({ audioPath, currentTime, duration, color = 'hsl(var(--
     const progress = effectiveDuration > 0 ? currentTime / effectiveDuration : 0
     const progressX = progress * canvasWidth
 
-    // Resolve CSS variables for canvas (canvas doesn't support var())
-    const trackColor = getComputedStyle(document.documentElement).getPropertyValue('--color-waveform-track').trim()
-    const progressColor = color.startsWith('var(')
-      ? `hsl(${getComputedStyle(document.documentElement).getPropertyValue(color.slice(4, -1)).trim()})`
-      : color
+    // Canvas fillStyle does not resolve nested CSS custom properties.
+    const trackColor = resolveCanvasColor('hsl(var(--color-waveform-track))')
+    const progressColor = resolveCanvasColor(color)
 
     ctx.clearRect(0, 0, canvasWidth, canvasHeight)
 
     // Track background (unplayed portion) - full width, dark gray
-    ctx.fillStyle = `hsl(${trackColor})`
+    ctx.fillStyle = trackColor
     drawWaveform(ctx, peaks, canvasWidth, canvasHeight, centerY)
 
     // Progress portion (played) - only up to progressX, project color

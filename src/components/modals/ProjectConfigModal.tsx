@@ -69,12 +69,12 @@ export function ProjectConfigModal({ onClose }: ProjectConfigModalProps) {
     setDirty(true)
   }
 
-  const handleResetApp = () => {
+  const handleResetApp = async () => {
     if (resetMode === 'config') {
       setConfig(DEFAULT_PROJECT_CONFIG)
       setDirty(true)
     } else if (resetMode === 'all') {
-      resetApp()
+      await resetApp()
       onClose()
       return
     }
@@ -178,7 +178,7 @@ export function ProjectConfigModal({ onClose }: ProjectConfigModalProps) {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/75 backdrop-blur-sm pad-lg"
+          className="fixed inset-0 z-[510] flex items-center justify-center bg-black/75 backdrop-blur-sm pad-lg"
           onClick={() => { setShowResetConfirm(false); setResetMode(null); }}
         >
           <motion.div
@@ -861,33 +861,31 @@ function BackupTab() {
       const res = type === 'config'
         ? await window.electronAPI!.configExport()
         : await window.electronAPI!.backupExport({ includeConfig: true, includeProjects: true, includeAlbums: true, includeFiles: true })
-      if (res.ok) setResult({ ok: true, message: `Salvo em:\n${res.path}\n${res.fileCount ? `${res.fileCount} arquivos incluídos` : ''}` })
+      if (res.ok) setResult({ ok: true, message: `Salvo em:\n${res.filePath}\n${res.fileCount ? `${res.fileCount} arquivos incluídos` : ''}` })
       else if (!res.canceled) setResult({ ok: false, message: res.error || 'Erro' })
     } catch (e: any) { setResult({ ok: false, message: e.message }) }
     finally { setLoading(null) }
   }
 
-  const handleImport = async (zipPath: string, type: 'config' | 'full') => {
-    setLoading({ type: 'import', sub: type })
+  const handleImport = async (zipPath: string) => {
+    setLoading({ type: 'import', sub: 'full' })
     try {
-      const res = type === 'config'
-        ? await window.electronAPI!.configImport(JSON.parse(await (await fetch(zipPath)).text())) // won't be used for config
-        : await window.electronAPI!.backupImport(zipPath)
+      const res = await window.electronAPI!.backupImport(zipPath)
       if (res.ok) {
-        setResult({ ok: true, message: type === 'config' ? 'Configurações importadas' : `Backup restaurado${res.fileCount ? ` (${res.fileCount} arquivos)` : ''}` })
+        setResult({ ok: true, message: `Backup restaurado${res.fileCount ? ` (${res.fileCount} arquivos)` : ''}` })
         setTimeout(() => window.location.reload(), 1500)
       } else setResult({ ok: false, message: res.error || 'Erro' })
     } catch { setResult({ ok: false, message: 'Arquivo inválido' }) }
     finally { setLoading(null) }
   }
 
-  const pickZipFile = (type: 'config' | 'full') => {
+  const pickZipFile = () => {
     const input = document.createElement('input')
     input.type = 'file'
-    input.accept = type === 'config' ? '.json' : '.zip'
+    input.accept = '.zip'
     input.onchange = e => {
       const file = (e.target as HTMLInputElement).files?.[0]
-      if (file) handleImport(URL.createObjectURL(file), type)
+      if (file) handleImport(URL.createObjectURL(file))
     }
     input.click()
   }
@@ -1024,7 +1022,7 @@ function BackupTab() {
                 size="sm"
                 variant="outline"
                 className="w-full mt-sm gap-xs border-amber-500 text-amber-400 hover:bg-amber-500/10 trans-colors"
-                onClick={() => pickZipFile('full')}
+                onClick={() => pickZipFile()}
                 disabled={isImportLoading && loading.sub === 'full'}
               >
                 <Upload className="w-3.5 h-3.5" />

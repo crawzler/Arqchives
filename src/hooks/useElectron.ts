@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { ElectronAPI } from '@/types/global'
 
 // Extende Window para incluir electronAPI
 declare global {

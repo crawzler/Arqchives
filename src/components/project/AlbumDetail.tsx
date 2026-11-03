@@ -16,6 +16,7 @@ import { TrackModal } from '@/components/modals/TrackModal'
 import { ConfirmModal } from '@/components/modals/ConfirmModal'
 import { BatchStatusModal } from '@/components/modals/BatchStatusModal'
 import { PlaylistPanel } from '@/components/player/PlaylistPanel'
+import { Button } from '@/components/ui/Button'
 
 import { Project } from '@/types'
 

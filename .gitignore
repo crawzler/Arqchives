@@ -6,7 +6,10 @@ node_modules/
 # Build
 dist/
 build/
+/build-output/
 *.local
+/electron/main.js
+/electron/preload.js
 
 # Environment
 .env
@@ -18,6 +21,10 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+/build-output.txt
+/build_output.txt
+/electron-err.txt
+/electron-out.txt
 
 # Editor
 .idea/
@@ -40,3 +47,9 @@ coverage/
 # Misc
 *.log
 *.tsbuildinfo
+/debug-*.js
+/build-test.js
+/fix-brace.js
+/test.zip
+/scripts/check_exe.py
+/scripts/gen-ico.js

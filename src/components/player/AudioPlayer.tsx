@@ -26,38 +26,22 @@ export function AudioPlayer({ src, onEnded, className, onPlaylistPlay, isPlaying
   const setRepeat = useSetRepeat()
   const setShuffle = useSetShuffle()
   const trackInfo = currentTrack?.track
-  // Get duration from track metadata if available
-  const trackDuration = trackInfo?.duration
   const audioRef = useRef<HTMLAudioElement>(null)
   const [currentTime, setCurrentTime] = useState(0)
-  const [duration, setDuration] = useState(trackDuration || 0)
-
-  // Sync duration from track metadata if audio hasn't loaded it yet
-  useEffect(() => {
-    if (trackDuration && duration === 0) {
-      setDuration(trackDuration)
-    }
-  }, [trackDuration, duration])
+  const [duration, setDuration] = useState(0)
   const [volume, setVolume] = useState(1)
-  const [waveformReady, setWaveformReady] = useState(false)
 
   // Project accent color for play button styling
   const projectColor = activeProject?.accent || '#3b82f6'
 
   // Refs for async event handlers to always see current values
-  const isPlayingRef = useRef(isPlaying)
   const srcRef = useRef(src)
-  const pendingPlayRef = useRef(false)
   const mountedRef = useRef(true)
-  // Track current source to prevent canplay from stale tracks
-  const currentSrcRef = useRef(src)
   
   // Reset mounted ref on mount
   mountedRef.current = true
   
-  isPlayingRef.current = isPlaying
   srcRef.current = src
-  currentSrcRef.current = src
 
   // Format time helper
   const formatTime = (seconds: number) => {
@@ -105,16 +89,11 @@ export function AudioPlayer({ src, onEnded, className, onPlaylistPlay, isPlaying
     // Reset time/duration when track changes
     setCurrentTime(0)
     setDuration(0)
-    // Reset waveform ready state when track changes
-    setWaveformReady(false)
     
     audio.src = src
     audio.loop = repeat === 'one'
     audio.load()
 
-    // Update current source ref when src changes
-    currentSrcRef.current = src
-    
     const handleTimeUpdate = () => {
       if (!mountedRef.current) return
       setCurrentTime(audio.currentTime)
@@ -137,6 +116,11 @@ export function AudioPlayer({ src, onEnded, className, onPlaylistPlay, isPlaying
     }
     const handleError = (_e: Event) => {
       if (!mountedRef.current) return
+      console.error('[AudioPlayer] Failed to load audio', {
+        src: audio.currentSrc || src,
+        code: audio.error?.code,
+        message: audio.error?.message,
+      })
       onPlayStateChange?.(false)
     }
     const handlePlay = () => {
@@ -178,63 +162,27 @@ export function AudioPlayer({ src, onEnded, className, onPlaylistPlay, isPlaying
     }
   }, [src, repeat, onEnded, dispatchGlobalEvent])
 
-  // Sync playback with controlled isPlaying prop (from store) - SINGLE SOURCE OF TRUTH
-  // DEPENDS ON `src` AND `waveformReady`: re-run when track changes or waveform ready
+  window.electronAPI?.debugLog('[AudioPlayer] Render', { src: src?.substring(0, 50) })
+  console.log('[AudioPlayer] Render, src:', src)
+
+  // Sync playback with controlled isPlaying prop (from store).
   useEffect(() => {
     const audio = audioRef.current
     if (!audio) return
     
     if (isPlaying) {
-      // If waveform not ready yet, wait for it
-      if (!waveformReady) {
-        pendingPlayRef.current = true
-        return
-      }
-      
-      // Track the source at the moment we start playing
       const playSrc = src
-      
-      // Try to play immediately
-      audio.play().catch(_err => {
-      })
-      
-      // Wait for canplay event - but only if the source hasn't changed
-      // IMPORTANT: if source changed, we still need to set up the new track's playback
-      const handleCanPlay = () => {
-        
-        // Check if source changed - if so, the new track's isPlaying effect will handle play
-        if (currentSrcRef.current !== playSrc) {
-          audio.removeEventListener('canplay', handleCanPlay);
-          return;
-        }
-        
-        audio.play().catch(_err => {
+      void audio.play().catch(error => {
+        console.error('[AudioPlayer] Playback failed', {
+          src: audio.currentSrc || playSrc,
+          error,
         })
-        // Remove listener after first fire
-        audio.removeEventListener('canplay', handleCanPlay)
-      }
-      audio.addEventListener('canplay', handleCanPlay)
-      
-      return () => {
-        audio.removeEventListener('canplay', handleCanPlay)
-      }
+        if (srcRef.current === playSrc) onPlayStateChange?.(false)
+      })
     } else {
-      pendingPlayRef.current = false
       audio.pause()
     }
-  }, [isPlaying, src, waveformReady])
-
-  // When waveform becomes ready and we were waiting to play, trigger playback
-  useEffect(() => {
-    if (waveformReady && pendingPlayRef.current && isPlaying) {
-      const audio = audioRef.current
-      if (audio) {
-        pendingPlayRef.current = false
-        audio.play().catch(_err => {
-        })
-      }
-    }
-  }, [waveformReady, isPlaying])
+  }, [isPlaying, src, onPlayStateChange])
 
   // Pause audio ONLY on true unmount (component removed from DOM), not on re-renders
   useEffect(() => {
@@ -473,7 +421,6 @@ export function AudioPlayer({ src, onEnded, className, onPlaylistPlay, isPlaying
           height={48}
           onSeek={handleSeek}
           isPlaying={isPlaying}
-          onReady={() => setWaveformReady(true)}
         />
       </div>
     </div>

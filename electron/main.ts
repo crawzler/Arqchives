@@ -1,18 +1,33 @@
 import { app, BrowserWindow, ipcMain, dialog, shell } from 'electron'
 import path from 'path'
 import fs from 'fs'
-import { fileURLToPath } from 'url'
 
-const __dirname = path.resolve()
+// __dirname is injected by esbuild when bundling for CJS
+declare const __dirname: string
+
 const isDev = !app.isPackaged
 
-// Disable GPU acceleration to fix black screen
-app.disableHardwareAcceleration()
-app.commandLine.appendSwitch('disable-gpu')
-app.commandLine.appendSwitch('disable-gpu-compositing')
-app.commandLine.appendSwitch('disable-software-rasterizer')
+function getPreloadPath() {
+  if (isDev) {
+    return path.join(process.cwd(), 'electron/preload.js')
+  }
+  return path.join(process.resourcesPath, 'electron', 'preload.js')
+}
 
-// ── Persistência em arquivo (userData) ───────────────────────────────────────
+function getIconPath() {
+  if (isDev) {
+    return path.join(process.cwd(), 'public/icon.ico')
+  }
+  return path.join(process.resourcesPath, 'icon.ico')
+}
+
+function getDistPath() {
+  if (isDev) {
+    return path.join(process.cwd(), 'dist/index.html')
+  }
+  return path.join(__dirname, '..', 'dist', 'index.html')
+}
+
 function getDataPath(fileName: string) {
   return path.join(app.getPath('userData'), fileName)
 }
@@ -34,21 +49,24 @@ function writeDataFile(fileName: string, data: string): boolean {
   } catch { return false }
 }
 
-// Migra dados do userData de dev (archives-app) para o build (Arqchives)
+function removeDataFile(fileName: string): boolean {
+  try {
+    const p = getDataPath(fileName)
+    if (fs.existsSync(p)) fs.unlinkSync(p)
+    return true
+  } catch { return false }
+}
+
 function migrateFromDev() {
   const devDataPath = path.join(path.dirname(app.getPath('userData')), 'archives-app')
   if (!fs.existsSync(devDataPath)) return
 
   const filesToMigrate = ['albums.json', 'app-root.txt', 'project-config.json']
   for (const fileName of filesToMigrate) {
-    const dest = getDataPath(fileName)
-    if (fs.existsSync(dest)) continue
     const src = path.join(devDataPath, fileName)
-    if (!fs.existsSync(src)) continue
-    try {
-      fs.mkdirSync(path.dirname(dest), { recursive: true })
+    const dest = getDataPath(fileName)
+    if (fs.existsSync(src) && !fs.existsSync(dest)) {
       fs.copyFileSync(src, dest)
-    } catch (e) {
     }
   }
 }
@@ -63,19 +81,16 @@ function createWindow() {
     titleBarStyle: 'hidden',
     frame: false,
     webPreferences: {
-      preload: path.join(__dirname, 'electron/preload.js'),
+      preload: getPreloadPath(),
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: false,
       webSecurity: false,
     },
-    icon: isDev 
-      ? path.join(process.cwd(), 'public', 'icon.ico')
-      : path.join(__dirname, '..', 'dist', 'icon.ico'),
+    icon: getIconPath(),
   })
 
   if (isDev) {
-    // Poll Vite dev server until ready (handles dynamic port)
     const tryLoad = async (attempt = 0) => {
       const ports = [50000, 50001, 50002, 50003, 50004, 50005, 50006, 50007, 50008, 50009, 50010]
       for (const port of ports) {
@@ -83,25 +98,22 @@ function createWindow() {
           const res = await fetch(`http://localhost:${port}/`).catch(() => null)
           if (res?.ok) {
             const text = await res.text()
-            // Verify it's Vite dev server (has module script or vite marker)
-            const isVite = text.includes('vite') || text.includes('src/main.tsx') || text.includes('type="module"')
-            if (isVite) {
+            if (text.includes('type="module"') || text.includes('/@vite/')) {
               win.loadURL(`http://localhost:${port}`)
               return
             }
           }
-        } catch (e) {
-        }
+        } catch { }
       }
       if (attempt < 30) {
         setTimeout(() => tryLoad(attempt + 1), 500)
       } else {
-        win.loadURL('http://localhost:50001') // fallback
+        win.loadURL('http://localhost:50001')
       }
     }
     tryLoad()
   } else {
-    win.loadFile(path.join(__dirname, '../dist/index.html'))
+    win.loadFile(getDistPath())
   }
 
   win.webContents.on('before-input-event', (event, input) => {
@@ -114,715 +126,516 @@ function createWindow() {
     }
   })
 
-  win.webContents.on('will-navigate', (e, url) => {
-    if (url.startsWith('file://')) e.preventDefault()
+  // Handle external drag-out
+  ipcMain.on('drag-out-file', (_e, filePath: string) => {
+    win.webContents.startDrag({
+      file: filePath,
+      icon: win.getNativeImage?.() || undefined,
+    })
   })
 }
 
-// Protocolo não é mais necessário — usando base64 via IPC
 app.whenReady().then(() => {
   migrateFromDev()
   createWindow()
+
+  app.on('activate', () => {
+    if (BrowserWindow.getAllWindows().length === 0) createWindow()
+  })
 })
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit()
 })
 
-app.on('activate', () => {
-  if (BrowserWindow.getAllWindows().length === 0) createWindow()
+// ── Window Controls ──────────────────────────────────────────────────────────────
+ipcMain.handle('window-minimize', (_e) => {
+  const win = BrowserWindow.getFocusedWindow()
+  win?.minimize()
 })
-
-// ── Pasta ────────────────────────────────────────────────────────────────────
-
-ipcMain.handle('select-folder', async () => {
-  const result = await dialog.showOpenDialog({ properties: ['openDirectory'] })
-  if (result.canceled) return null
-  return result.filePaths[0]
-})
-
-ipcMain.handle('select-dest-folder', async () => {
-  const result = await dialog.showOpenDialog({
-    properties: ['openDirectory'],
-    title: 'Selecionar pasta destino',
-  })
-  if (result.canceled) return null
-  return result.filePaths[0]
-})
-
-ipcMain.handle('select-files', async (_, opts: { title?: string; filters?: Electron.FileFilter[]; multiple?: boolean } = {}) => {
-  const properties: Array<'openFile' | 'multiSelections'> = ['openFile']
-  if (opts.multiple) properties.push('multiSelections')
-  const result = await dialog.showOpenDialog({
-    title: opts.title || 'Selecionar arquivo',
-    filters: opts.filters || [],
-    properties,
-  })
-  if (result.canceled) return null
-  return result.filePaths
-})
-
-// ── Listar arquivos ───────────────────────────────────────────────────────────
-
-ipcMain.handle('list-files', async (_, folderPath: string) => {
-  if (!folderPath || !fs.existsSync(folderPath)) return []
-  try {
-    const entries = await fs.promises.readdir(folderPath, { withFileTypes: true })
-    const items = await Promise.all(entries.map(async (entry) => {
-      const fullPath = path.join(folderPath, entry.name)
-      let size = 0
-      try {
-        if (!entry.isDirectory()) {
-          const stat = await fs.promises.stat(fullPath)
-          size = stat.size
-        }
-      } catch {}
-      return {
-        name: entry.name,
-        isDirectory: entry.isDirectory(),
-        path: fullPath,
-        ext: path.extname(entry.name).toLowerCase(),
-        size,
-      }
-    }))
-    return items
-  } catch {
-    return []
-  }
-})
-
-ipcMain.handle('list-files-recursive', async (_, folderPath: string) => {
-  if (!folderPath || !fs.existsSync(folderPath)) return []
-
-  const results: any[] = []
-
-  async function walk(dir: string) {
-    let entries
-    try {
-      entries = await fs.promises.readdir(dir, { withFileTypes: true })
-    } catch {
-      return
-    }
-
-    const dirs: string[] = []
-    for (const entry of entries) {
-      const fullPath = path.join(dir, entry.name)
-      if (entry.isDirectory()) {
-        dirs.push(fullPath)
-      } else {
-        let size = 0
-        try {
-          const stat = await fs.promises.stat(fullPath)
-          size = stat.size
-        } catch {}
-        results.push({
-          name: entry.name,
-          isDirectory: false,
-          path: fullPath,
-          ext: path.extname(entry.name).toLowerCase(),
-          size,
-          relativePath: path.relative(folderPath, fullPath),
-        })
-      }
-    }
-
-    const CONCURRENCY = 8
-    for (let i = 0; i < dirs.length; i += CONCURRENCY) {
-      await Promise.all(dirs.slice(i, i + CONCURRENCY).map(walk))
-    }
-  }
-
-  await walk(folderPath)
-  return results
-})
-
-ipcMain.handle('file-exists', async (_, filePath: string) => {
-  if (!filePath) return false
-  return fs.existsSync(filePath)
-})
-
-ipcMain.on('drag-out-file', (event, filePath: string) => {
-  if (!filePath || !fs.existsSync(filePath)) return
-
-  const candidateIcons = isDev
-    ? [
-        path.join(__dirname, '../public/icon.png'),
-        path.join(__dirname, '../public/icons.svg'),
-      ]
-    : [
-        path.join(process.resourcesPath, 'icon.ico'),
-        path.join(process.resourcesPath, 'icon.png'),
-        path.join(__dirname, '../dist/icon.png'),
-        path.join(__dirname, '../public/icon.png'),
-      ]
-
-  const iconPath = candidateIcons.find(p => fs.existsSync(p))
-  if (!iconPath) {
-    return
-  }
-
-  try {
-    event.sender.startDrag({ file: filePath, icon: iconPath })
-  } catch (err) {
-  }
-})
-
-// ── Abrir / revelar ───────────────────────────────────────────────────────────
-
-ipcMain.handle('open-file', async (_, filePath: string) => {
-  shell.openPath(filePath)
-})
-
-ipcMain.handle('reveal-file', async (_, filePath: string) => {
-  shell.showItemInFolder(filePath)
-})
-
-// ── Operações de arquivo ──────────────────────────────────────────────────────
-
-ipcMain.handle('rename-file', async (_, oldPath: string, newName: string) => {
-  try {
-    const dir = path.dirname(oldPath)
-    const newPath = path.join(dir, newName)
-    if (fs.existsSync(newPath)) return { ok: false, error: 'Já existe um arquivo com esse nome.' }
-    fs.renameSync(oldPath, newPath)
-    return { ok: true, newPath }
-  } catch (e: any) {
-    return { ok: false, error: e.message }
-  }
-})
-
-ipcMain.handle('delete-file', async (_, filePath: string) => {
-  try {
-    if (!filePath) return { ok: false, error: 'Path não informado.' }
-    if (!fs.existsSync(filePath)) return { ok: true }
-
-    const stat = fs.statSync(filePath)
-    if (stat.isDirectory()) {
-      fs.rmSync(filePath, { recursive: true, force: true })
-    } else {
-      fs.unlinkSync(filePath)
-    }
-    return { ok: true }
-  } catch (e: any) {
-    return { ok: false, error: e.message }
-  }
-})
-
-ipcMain.handle('move-file', async (_, filePath: string, destFolder: string) => {
-  try {
-    const name = path.basename(filePath)
-    let destPath = path.join(destFolder, name)
-    let counter = 1
-    while (fs.existsSync(destPath)) {
-      const ext = path.extname(name)
-      const base = path.basename(name, ext)
-      destPath = path.join(destFolder, `${base} (${counter})${ext}`)
-      counter++
-    }
-    fs.renameSync(filePath, destPath)
-    return { ok: true, newPath: destPath }
-  } catch (e: any) {
-    return { ok: false, error: e.message }
-  }
-})
-
-ipcMain.handle('copy-file', async (_, filePath: string, destFolder: string) => {
-  try {
-    const name = path.basename(filePath)
-    let destPath = path.join(destFolder, name)
-    let counter = 1
-    while (fs.existsSync(destPath)) {
-      const ext = path.extname(name)
-      const base = path.basename(name, ext)
-      destPath = path.join(destFolder, `${base} (${counter})${ext}`)
-      counter++
-    }
-    fs.copyFileSync(filePath, destPath)
-    return { ok: true, newPath: destPath }
-  } catch (e: any) {
-    return { ok: false, error: e.message }
-  }
-})
-
-ipcMain.handle('create-folder', async (_, parentPath: string, folderName: string) => {
-  try {
-    const newPath = path.join(parentPath, folderName)
-    if (fs.existsSync(newPath)) return { ok: false, error: 'Pasta já existe.' }
-    fs.mkdirSync(newPath)
-    return { ok: true, newPath }
-  } catch (e: any) {
-    return { ok: false, error: e.message }
-  }
-})
-
-ipcMain.handle('ensure-folder', async (_, dirPath: string) => {
-  try {
-    fs.mkdirSync(dirPath, { recursive: true })
-    return { ok: true }
-  } catch (e: any) {
-    return { ok: false, error: e.message }
-  }
-})
-
-ipcMain.handle('move-or-copy-file', async (_, opts: { srcPath: string; destFolder: string; fileName?: string; mode: 'move' | 'copy' }) => {
-  const { srcPath, destFolder, fileName, mode } = opts
-  try {
-    if (!fs.existsSync(srcPath)) return { ok: false, error: 'Arquivo de origem não encontrado.' }
-
-    fs.mkdirSync(destFolder, { recursive: true })
-
-    const name = fileName || path.basename(srcPath)
-    let destPath = path.join(destFolder, name)
-
-    let counter = 1
-    while (fs.existsSync(destPath)) {
-      if (path.resolve(srcPath) === path.resolve(destPath)) {
-        return { ok: true, newPath: destPath }
-      }
-      const ext = path.extname(name)
-      const base = path.basename(name, ext)
-      destPath = path.join(destFolder, `${base} (${counter})${ext}`)
-      counter++
-    }
-
-    if (mode === 'copy') {
-      fs.copyFileSync(srcPath, destPath)
-    } else {
-      try {
-        fs.renameSync(srcPath, destPath)
-      } catch (renameErr: any) {
-        if (renameErr.code === 'EXDEV') {
-          fs.copyFileSync(srcPath, destPath)
-          fs.unlinkSync(srcPath)
-        } else {
-          throw renameErr
-        }
-      }
-    }
-
-    return { ok: true, newPath: destPath }
-  } catch (e: any) {
-    return { ok: false, error: e.message }
-  }
-})
-
-// Lê arquivo e retorna como data URL base64
-ipcMain.handle('get-local-url', async (_, filePath: string) => {
-  try {
-    if (!fs.existsSync(filePath)) return null
-    const ext = path.extname(filePath).toLowerCase()
-
-    const mimeMap: Record<string, string> = {
-      '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
-      '.png': 'image/png', '.gif': 'image/gif',
-      '.webp': 'image/webp', '.svg': 'image/svg+xml',
-      '.bmp': 'image/bmp', '.tiff': 'image/tiff',
-      '.mp4': 'video/mp4', '.mov': 'video/quicktime',
-      '.avi': 'video/x-msvideo', '.mkv': 'video/x-matroska',
-      '.webm': 'video/webm', '.wmv': 'video/x-ms-wmv',
-      '.mp3': 'audio/mpeg', '.wav': 'audio/wav',
-      '.flac': 'audio/flac', '.aiff': 'audio/aiff',
-      '.ogg': 'audio/ogg', '.m4a': 'audio/mp4',
-      '.aac': 'audio/aac', '.wma': 'audio/x-ms-wma',
-    }
-
-    const mime = mimeMap[ext]
-    if (!mime) return null
-
-    if (mime.startsWith('video/') || mime.startsWith('audio/')) {
-      // Windows: file:///C:/path/to/file - precisa do slash inicial
-      const normalized = filePath.replace(/\\/g, '/')
-      const withLeadingSlash = normalized.startsWith('/') ? normalized : '/' + normalized
-      return `file://${withLeadingSlash}`
-    }
-
-    const stat = await fs.promises.stat(filePath)
-    if (stat.size > 10 * 1024 * 1024) return null
-
-    const buffer = await fs.promises.readFile(filePath)
-    return `data:${mime};base64,${buffer.toString('base64')}`
-  } catch {
-    return null
-  }
-})
-
-// ── Audio Metadata ──────────────────────────────────────────────────────────
-// Get audio file duration and metadata
-ipcMain.handle('get-audio-metadata', async (_, filePath: string) => {
-  try {
-    if (!filePath || !fs.existsSync(filePath)) return { duration: null, size: 0 }
-    
-    // Get file size
-    const stat = await fs.promises.stat(filePath)
-    const size = stat.size
-    
-    // Try to get duration using music-metadata
-    let duration: number | null = null
-    
-    try {
-      const mm = await import('music-metadata')
-      const metadata = await mm.parseFile(filePath, { duration: true, skipCovers: true })
-      duration = metadata.format.duration || null
-    } catch {
-      // music-metadata not available
-    }
-    
-    return { duration, size }
-  } catch (e: any) {
-    return { duration: null, size: 0 }
-  }
-})
-
-// Read audio file as ArrayBuffer for waveform generation
-ipcMain.handle('read-audio-file', async (_, filePath: string) => {
-  try {
-    if (!filePath || !fs.existsSync(filePath)) return null
-    const buffer = await fs.promises.readFile(filePath)
-    return buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength) as ArrayBuffer
-  } catch (e: any) {
-    return null
-  }
-})
-
-// ── Controles da janela ───────────────────────────────────────────────────────
-
-ipcMain.on('window-minimize', () => BrowserWindow.getFocusedWindow()?.minimize())
-ipcMain.on('window-maximize', () => {
+ipcMain.handle('window-maximize', (_e) => {
   const win = BrowserWindow.getFocusedWindow()
   if (win?.isMaximized()) win.unmaximize()
   else win?.maximize()
 })
-ipcMain.on('window-close', () => BrowserWindow.getFocusedWindow()?.close())
-
-// ── Store IPC ─────────────────────────────────────────────────────────────────
-
-ipcMain.handle('store-read', (_, fileName: string) => {
-  const result = readDataFile(fileName)
-  return result
+ipcMain.handle('window-close', (_e) => {
+  const win = BrowserWindow.getFocusedWindow()
+  win?.close()
 })
 
-ipcMain.handle('store-write', (_, fileName: string, data: string) => writeDataFile(fileName, data))
-
-// Write appRoot to app-root.txt for backup compatibility
-ipcMain.handle('set-app-root', (_, path: string) => {
-  const ok = writeDataFile('app-root.txt', path)
-  return ok
+// ── Folder/File Operations ───────────────────────────────────────────────────────
+ipcMain.handle('select-folder', async () => {
+  const result = await dialog.showOpenDialog({
+    properties: ['openDirectory', 'createDirectory'],
+    title: 'Selecione uma pasta',
+  })
+  if (!result.canceled && result.filePaths.length > 0) return result.filePaths[0]
+  return null
 })
 
-ipcMain.handle('get-user-data-path', () => app.getPath('userData'))
-
-ipcMain.handle('get-recommended-app-path', () => {
-  // Pasta recomendada: userData/Arqchives (pasta limpa só do app)
-  return path.join(app.getPath('userData'), 'Arqchives')
+ipcMain.handle('select-dest-folder', async () => {
+  const result = await dialog.showOpenDialog({
+    properties: ['openDirectory', 'createDirectory'],
+    title: 'Selecione a pasta de destino',
+  })
+  if (!result.canceled && result.filePaths.length > 0) return result.filePaths[0]
+  return null
 })
 
-// ── Backup IPC (ZIP real com arquivos) ────────────────────────────────────────────
+ipcMain.handle('select-files', async (_e, opts?: { title?: string; filters?: Electron.FileFilter[]; multiple?: boolean }) => {
+  const result = await dialog.showOpenDialog({
+    properties: ['openFile', opts?.multiple ? 'multiSelections' : ''].filter(Boolean) as any,
+    title: opts?.title || 'Selecione arquivos',
+    filters: opts?.filters,
+  })
+  if (!result.canceled && result.filePaths.length > 0) return result.filePaths
+  return null
+})
 
-function collectAllFilePaths(data: any): string[] {
-  const files: string[] = []
-  
-  // Collect from albums
-  if (data.albums) {
-    Object.values(data.albums).forEach((projectAlbums: any) => {
-      if (Array.isArray(projectAlbums)) {
-        projectAlbums.forEach((album: any) => {
-          if (album.coverPath) files.push(album.coverPath)
-          if (album.files) album.files.forEach((f: string) => files.push(f))
-          if (album.tracks) {
-            album.tracks.forEach((track: any) => {
-              if (track.files) track.files.forEach((f: string) => files.push(f))
-              if (track.audioVersions) {
-                track.audioVersions.forEach((v: any) => v.path && files.push(v.path))
-              }
-            })
-          }
-        })
-      }
-    })
-  }
-  
-  return Array.from(new Set(files.filter(f => f && fs.existsSync(f))))
-}
-
-ipcMain.handle('backup-export', async (_, opts: { 
-  includeConfig?: boolean; 
-  includeProjects?: boolean; 
-  includeAlbums?: boolean; 
-  includeFiles?: boolean 
-} = {}) => {
-  const tempDir = fs.mkdtempSync(path.join(app.getPath('temp'), 'arqchives-backup-'))
-  
+ipcMain.handle('list-files', async (_e, folderPath: string) => {
   try {
-    
-    const { 
-      includeConfig = true, 
-      includeProjects = true, 
-      includeAlbums = true, 
-      includeFiles = true 
-    } = opts
-    
-    const backup: any = {
-      version: 2,
-      exportedAt: Date.now(),
-      appName: 'Arqchives',
-      hasFiles: includeFiles,
-    }
-    
-    // Read from arqchives-store (single source of truth for all app state)
-    const storeData = readDataFile('arqchives-store')
-    let storeState: any = {}
-    if (storeData) {
-      try {
-        storeState = JSON.parse(storeData)
-      } catch (e) {
-      }
-    }
-    
-    // Extract state from Zustand persist format: { state: {...}, version: N }
-    const state = storeState.state || storeState
-    
-    if (includeConfig) {
-      backup.appRoot = state.appRoot || readDataFile('app-root.txt')
-      backup.projectConfig = state.projectConfig || JSON.parse(readDataFile('project-config.json') || '{}')
-    }
-    if (includeProjects) {
-      backup.projects = state.projects || []
-    }
-    if (includeAlbums) {
-      backup.albums = state.albums || {}
-    }
-    
-    // Also write individual JSON files for backward compatibility during import
-    if (backup.appRoot) fs.writeFileSync(path.join(tempDir, 'app-root.txt'), backup.appRoot, 'utf-8')
-    if (backup.projectConfig) fs.writeFileSync(path.join(tempDir, 'project-config.json'), JSON.stringify(backup.projectConfig, null, 2), 'utf-8')
-    if (backup.projects) fs.writeFileSync(path.join(tempDir, 'projects.json'), JSON.stringify(backup.projects, null, 2), 'utf-8')
-    if (backup.albums) fs.writeFileSync(path.join(tempDir, 'albums.json'), JSON.stringify(backup.albums, null, 2), 'utf-8')
-    
-    // Write metadata.json to temp
-    fs.writeFileSync(path.join(tempDir, 'metadata.json'), JSON.stringify(backup, null, 2), 'utf-8')
-    
-    // Create ZIP - show dialog FIRST, then copy files and zip
-    const defaultPath = path.join(app.getPath('downloads'), `Arqchives-Backup-${new Date().toISOString().split('T')[0]}.zip`)
-    const result = await dialog.showSaveDialog({
-      title: 'Exportar Backup Completo (com arquivos)',
-      defaultPath,
-      filters: [{ name: 'ZIP Backup', extensions: ['zip'] }]
-    })
-    
-    if (result.canceled) {
-      fs.rmSync(tempDir, { recursive: true, force: true })
-      return { ok: false, canceled: true }
-    }
+    if (!fs.existsSync(folderPath)) return []
+    const entries = fs.readdirSync(folderPath, { withFileTypes: true })
+    return entries.map(e => ({
+      name: e.name,
+      isDirectory: e.isDirectory(),
+      path: path.join(folderPath, e.name),
+      ext: path.extname(e.name).toLowerCase(),
+      size: e.isFile() ? fs.statSync(path.join(folderPath, e.name)).size : 0,
+    }))
+  } catch { return [] }
+})
 
-    // Copy files AFTER user picks location (if includeFiles)
-    let copiedFiles = 0
-    if (includeFiles) {
-      const filePaths = collectAllFilePaths(backup)
-      const filesDir = path.join(tempDir, 'files')
-      fs.mkdirSync(filesDir, { recursive: true })
-      
-      for (const srcPath of filePaths) {
-        try {
-          let relPath = srcPath
-          if (backup.appRoot && srcPath.startsWith(backup.appRoot)) {
-            relPath = path.relative(backup.appRoot, srcPath)
-          } else {
-            const hash = require('crypto').createHash('md5').update(srcPath).digest('hex').slice(0, 8)
-            const ext = path.extname(srcPath)
-            relPath = `external/${hash}${ext}`
-          }
-          
-          const destPath = path.join(filesDir, relPath)
-          fs.mkdirSync(path.dirname(destPath), { recursive: true })
-          fs.copyFileSync(srcPath, destPath)
-          copiedFiles++
-        } catch (e) {
+ipcMain.handle('list-files-recursive', async (_e, folderPath: string) => {
+  try {
+    if (!fs.existsSync(folderPath)) return []
+    const results: Array<{ name: string; isDirectory: boolean; path: string; ext: string; size: number; relativePath: string }> = []
+    const walk = (dir: string, base: string) => {
+      const entries = fs.readdirSync(dir, { withFileTypes: true })
+      for (const entry of entries) {
+        const fullPath = path.join(dir, entry.name)
+        const relPath = path.relative(base, fullPath)
+        if (entry.isDirectory()) {
+          results.push({ name: entry.name, isDirectory: true, path: fullPath, ext: '', size: 0, relativePath: relPath })
+          walk(fullPath, base)
+        } else {
+          const stat = fs.statSync(fullPath)
+          results.push({ name: entry.name, isDirectory: false, path: fullPath, ext: path.extname(entry.name).toLowerCase(), size: stat.size, relativePath: relPath })
         }
       }
-      backup.fileCount = copiedFiles
-      fs.writeFileSync(path.join(tempDir, 'metadata.json'), JSON.stringify(backup, null, 2), 'utf-8')
     }
-    
-    // Create ZIP from tempDir using archiver (streaming, low memory) - dynamic import to avoid bundling
-    // Use dynamic import with IIFE to prevent esbuild static analysis
-    const Archiver = (await (async () => {
-      const mod = await import('archiver')
-      return mod.Archiver || mod.default?.Archiver || mod.default
-    })())
-    if (!Archiver) {
-      throw new Error('Archiver class not found in archiver module')
-    }
-    await new Promise<void>((resolve, reject) => {
-      const output = fs.createWriteStream(result.filePath)
-      const archive = new Archiver('zip', { zlib: { level: 6 } })
-      
-      archive.on('error', (err: Error) => {
-        reject(err)
-      })
-      output.on('close', () => {
-        resolve()
-      })
-      output.on('error', (err: Error) => {
-        reject(err)
-      })
-      
-      archive.pipe(output)
-      archive.directory(tempDir, false)
-      archive.finalize()
-    })
-    
-    // Cleanup temp
-    fs.rmSync(tempDir, { recursive: true, force: true })
-    
-    return { ok: true, path: result.filePath, fileCount: copiedFiles }
-  } catch (e: any) {
-    fs.rmSync(tempDir, { recursive: true, force: true })
-    return { ok: false, error: e.message || String(e) }
-  }
+    walk(folderPath, folderPath)
+    return results
+  } catch { return [] }
 })
 
-ipcMain.handle('backup-import', async (_, zipPath: string) => {
-  const tempDir = fs.mkdtempSync(path.join(app.getPath('temp'), 'arqchives-restore-'))
-  
-  try {
-    if (!zipPath || !fs.existsSync(zipPath)) {
-      return { ok: false, error: 'Arquivo ZIP não encontrado.' }
-    }
-    
-    // Extract ZIP
-    await new Promise<void>((resolve, reject) => {
-      const AdmZip = require('adm-zip')
-      try {
-        const zip = new AdmZip(zipPath)
-        zip.extractAllTo(tempDir, true)
-        resolve()
-      } catch (e) {
-        reject(e)
-      }
-    })
-    
-    // Read metadata
-    const metadataPath = path.join(tempDir, 'metadata.json')
-    if (!fs.existsSync(metadataPath)) {
-      fs.rmSync(tempDir, { recursive: true, force: true })
-      return { ok: false, error: 'Backup inválido: metadata.json não encontrado.' }
-    }
-    
-    const backup = JSON.parse(fs.readFileSync(metadataPath, 'utf-8'))
-    if (!backup || backup.appName !== 'Arqchives') {
-      fs.rmSync(tempDir, { recursive: true, force: true })
-      return { ok: false, error: 'Arquivo de backup inválido.' }
-    }
-    
-    // Restore JSON data
-    if (backup.appRoot) writeDataFile('app-root.txt', backup.appRoot)
-    if (backup.projectConfig) writeDataFile('project-config.json', JSON.stringify(backup.projectConfig))
-    if (backup.projects) writeDataFile('projects.json', JSON.stringify(backup.projects))
-    if (backup.albums) writeDataFile('albums.json', JSON.stringify(backup.albums))
-    
-    // Also restore to arqchives-store (Zustand persist format) for immediate app state sync
-    const existingStore = readDataFile('arqchives-store')
-    let existingState: any = {}
-    if (existingStore) {
-      try {
-        existingState = JSON.parse(existingStore)
-      } catch {}
-    }
-    const restoredStore = {
-      state: {
-        ...(existingState.state || existingState),
-        ...(backup.appRoot && { appRoot: backup.appRoot }),
-        ...(backup.projectConfig && { projectConfig: backup.projectConfig }),
-        ...(backup.projects && { projects: backup.projects }),
-        ...(backup.albums && { albums: backup.albums }),
-      },
-      version: existingState.version || 2,
-    }
-    writeDataFile('arqchives-store', JSON.stringify(restoredStore))
+ipcMain.handle('file-exists', async (_e, filePath: string) => {
+  try { return fs.existsSync(filePath) } catch { return false }
+})
 
-    // Restore files if present
-    let restoredFiles = 0
-    if (backup.hasFiles) {
-      const filesDir = path.join(tempDir, 'files')
-      if (fs.existsSync(filesDir)) {
-        // Walk files dir and copy to original locations
-        const walkAndCopy = async (dir: string, baseDir: string) => {
-          const entries = await fs.promises.readdir(dir, { withFileTypes: true })
-          for (const entry of entries) {
-            const fullPath = path.join(dir, entry.name)
-            if (entry.isDirectory()) {
-              await walkAndCopy(fullPath, baseDir)
-            } else {
-              const relPath = path.relative(baseDir, fullPath)
-              // Try to restore to original location if under appRoot
-              let destPath: string
-              if (backup.appRoot && !relPath.startsWith('external/')) {
-                destPath = path.join(backup.appRoot, relPath)
-              } else if (relPath.startsWith('external/')) {
-                // For external files, restore to appRoot/files/external/...
-                destPath = path.join(backup.appRoot || app.getPath('userData'), 'Arqchives', 'restored', relPath)
+ipcMain.handle('open-file', async (_e, filePath: string) => {
+  try { await shell.openPath(filePath) } catch { }
+})
+
+ipcMain.handle('reveal-file', async (_e, filePath: string) => {
+  try { await shell.showItemInFolder(filePath) } catch { }
+})
+
+ipcMain.handle('rename-file', async (_e, { oldPath, newName }: { oldPath: string; newName: string }) => {
+  try {
+    const newPath = path.join(path.dirname(oldPath), newName)
+    fs.renameSync(oldPath, newPath)
+    return { ok: true, newPath }
+  } catch (err) { return { ok: false, error: String(err) } }
+})
+
+ipcMain.handle('delete-file', async (_e, filePath: string) => {
+  try {
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath)
+    return { ok: true }
+  } catch (err) { return { ok: false, error: String(err) } }
+})
+
+ipcMain.handle('move-file', async (_e, { filePath, destFolder }: { filePath: string; destFolder: string }) => {
+  try {
+    const fileName = path.basename(filePath)
+    const newPath = path.join(destFolder, fileName)
+    fs.mkdirSync(path.dirname(newPath), { recursive: true })
+    fs.renameSync(filePath, newPath)
+    return { ok: true, newPath }
+  } catch (err) { return { ok: false, error: String(err) } }
+})
+
+ipcMain.handle('copy-file', async (_e, { filePath, destFolder }: { filePath: string; destFolder: string }) => {
+  try {
+    const fileName = path.basename(filePath)
+    const newPath = path.join(destFolder, fileName)
+    fs.mkdirSync(path.dirname(newPath), { recursive: true })
+    fs.copyFileSync(filePath, newPath)
+    return { ok: true, newPath }
+  } catch (err) { return { ok: false, error: String(err) } }
+})
+
+ipcMain.handle('create-folder', async (_e, { parentPath, folderName }: { parentPath: string; folderName: string }) => {
+  try {
+    const newPath = path.join(parentPath, folderName)
+    fs.mkdirSync(newPath, { recursive: true })
+    return { ok: true, newPath }
+  } catch (err) { return { ok: false, error: String(err) } }
+})
+
+ipcMain.handle('ensure-folder', async (_e, dirPath: string) => {
+  try {
+    fs.mkdirSync(dirPath, { recursive: true })
+    return { ok: true }
+  } catch (err) { return { ok: false, error: String(err) } }
+})
+
+ipcMain.handle('move-or-copy-file', async (_e, opts: { srcPath: string; destFolder: string; fileName?: string; mode: 'move' | 'copy' }) => {
+  try {
+    const fileName = opts.fileName || path.basename(opts.srcPath)
+    const newPath = path.join(opts.destFolder, fileName)
+    fs.mkdirSync(path.dirname(newPath), { recursive: true })
+    if (opts.mode === 'move') fs.renameSync(opts.srcPath, newPath)
+    else fs.copyFileSync(opts.srcPath, newPath)
+    return { ok: true, newPath }
+  } catch (err) { return { ok: false, error: String(err) } }
+})
+
+ipcMain.handle('get-local-url', async (_e, filePath: string) => {
+  try {
+    if (!fs.existsSync(filePath)) return null
+    // Return a file:// URL with 3 slashes for Windows (file:///C:/path)
+    return `file:///${filePath.replace(/\\/g, '/')}`
+  } catch { return null }
+})
+
+// Audio metadata
+ipcMain.handle('get-audio-metadata', async (_e, filePath: string) => {
+  try {
+    if (!fs.existsSync(filePath)) return { duration: null, size: 0 }
+    const stat = fs.statSync(filePath)
+    // For now return basic info; can integrate music-metadata later
+    return { duration: null, size: stat.size }
+  } catch { return { duration: null, size: 0 } }
+})
+
+ipcMain.handle('read-audio-file', async (_e, filePath: string) => {
+  try {
+    if (!fs.existsSync(filePath)) return null
+    return fs.readFileSync(filePath)
+  } catch { return null }
+})
+
+// ── Store Persistence ────────────────────────────────────────────────────────────
+ipcMain.handle('store-read', async (_e, fileName: string) => {
+  return readDataFile(fileName)
+})
+
+ipcMain.handle('store-write', async (_e, { fileName, data }: { fileName: string; data: string }) => {
+  return writeDataFile(fileName, data)
+})
+
+ipcMain.handle('store-remove', async (_e, fileName: string) => {
+  return removeDataFile(fileName)
+})
+
+// Debug logging from renderer
+ipcMain.handle('debug-log', async (_e, message: string, data?: any) => {
+  console.log(`[Renderer] ${message}`, data ?? '')
+  return true
+})
+
+ipcMain.handle('get-user-data-path', async () => {
+  return app.getPath('userData')
+})
+
+ipcMain.handle('set-app-root-path', async (_e, rootPath: string) => {
+  return writeDataFile('app-root.txt', rootPath)
+})
+
+ipcMain.handle('get-recommended-app-path', async () => {
+  // Return a sensible default path for the app data
+  const defaultPath = path.join(app.getPath('documents'), 'Arqchives')
+  return defaultPath
+})
+
+// ── Backup ───────────────────────────────────────────────────────────────────────
+ipcMain.handle('backup-export', async (_e, opts?: { includeConfig?: boolean; includeProjects?: boolean; includeAlbums?: boolean; includeFiles?: boolean; includeStore?: boolean }) => {
+  const archiver = (await import('archiver')).default
+  const backupPath = path.join(app.getPath('downloads'), `arqchives-backup-${Date.now()}.zip`)
+  const output = fs.createWriteStream(backupPath)
+  const archive = archiver('zip', { zlib: { level: 9 } })
+
+  return new Promise<{ ok: boolean; filePath?: string; error?: string }>((resolve) => {
+    output.on('close', () => resolve({ ok: true, filePath: backupPath }))
+    archive.on('error', (err) => resolve({ ok: false, error: String(err) }))
+    archive.pipe(output)
+
+    if (opts?.includeConfig !== false) {
+      const configPath = getDataPath('app-config.json')
+      if (fs.existsSync(configPath)) archive.file(configPath, { name: 'app-config.json' })
+    }
+    if (opts?.includeStore !== false) {
+      const storePath = getDataPath('arqchives-store')
+      if (fs.existsSync(storePath)) archive.file(storePath, { name: 'arqchives-store' })
+    }
+    if (opts?.includeProjects !== false) {
+      const root = readDataFile('app-root.txt')
+      if (root && fs.existsSync(root)) archive.directory(root, 'projects')
+    }
+    if (opts?.includeAlbums !== false) {
+      const albumsPath = getDataPath('albums.json')
+      if (fs.existsSync(albumsPath)) archive.file(albumsPath, { name: 'albums.json' })
+    }
+
+    archive.finalize()
+  })
+})
+
+ipcMain.handle('backup-import', async (_e, zipPath: string) => {
+  const AdmZip = (await import('adm-zip')).default
+  const fs = await import('fs')
+  const path = await import('path')
+
+  try {
+    if (!fs.existsSync(zipPath)) {
+      return { ok: false, error: 'Arquivo ZIP não encontrado' }
+    }
+
+    const zip = new AdmZip(zipPath)
+    const zipEntries = zip.getEntries()
+    let fileCount = 0
+
+    // Extract to a temporary directory first
+    const tempDir = path.join(app.getPath('temp'), `arqchives-restore-${Date.now()}`)
+    fs.mkdirSync(tempDir, { recursive: true })
+    zip.extractAllTo(tempDir, true)
+
+    // 1. Restore app-config.json (project config)
+    const configEntry = zipEntries.find(e => e.entryName === 'app-config.json')
+    if (configEntry) {
+      const configPath = getDataPath('app-config.json')
+      fs.writeFileSync(configPath, configEntry.getData().toString('utf-8'))
+      fileCount++
+    }
+
+    // 2. Restore arqchives-store (Zustand persist) - NOVO
+    const storeEntry = zipEntries.find(e => e.entryName === 'arqchives-store')
+    if (storeEntry) {
+      const storePath = getDataPath('arqchives-store')
+      fs.writeFileSync(storePath, storeEntry.getData().toString('utf-8'))
+      fileCount++
+    }
+
+    // 3. Restore albums.json (legacy)
+    const albumsEntry = zipEntries.find(e => e.entryName === 'albums.json')
+    if (albumsEntry) {
+      const albumsPath = getDataPath('albums.json')
+      fs.writeFileSync(albumsPath, albumsEntry.getData().toString('utf-8'))
+      fileCount++
+    }
+
+    // 4. Restore projects folder (if exists in zip)
+    const projectsEntries = zipEntries.filter(e => e.entryName.startsWith('projects/'))
+    if (projectsEntries.length > 0) {
+      const root = readDataFile('app-root.txt')
+      if (root && fs.existsSync(root)) {
+        // Copy extracted projects to the app root
+        const extractedProjectsPath = path.join(tempDir, 'projects')
+        if (fs.existsSync(extractedProjectsPath)) {
+          const copyRecursive = (src: string, dest: string) => {
+            const entries = fs.readdirSync(src, { withFileTypes: true })
+            fs.mkdirSync(dest, { recursive: true })
+            for (const entry of entries) {
+              const srcPath = path.join(src, entry.name)
+              const destPath = path.join(dest, entry.name)
+              if (entry.isDirectory()) {
+                copyRecursive(srcPath, destPath)
               } else {
-                destPath = path.join(backup.appRoot || app.getPath('userData'), 'Arqchives', 'restored', relPath)
-              }
-              
-              try {
-                fs.mkdirSync(path.dirname(destPath), { recursive: true })
-                fs.copyFileSync(fullPath, destPath)
-                restoredFiles++
-              } catch (e) {
+                fs.copyFileSync(srcPath, destPath)
+                fileCount++
               }
             }
           }
+          copyRecursive(extractedProjectsPath, root)
         }
-        await walkAndCopy(filesDir, filesDir)
       }
     }
-    
+
+    // Cleanup temp dir
     fs.rmSync(tempDir, { recursive: true, force: true })
-    return { ok: true, fileCount: restoredFiles }
-  } catch (e: any) {
-    fs.rmSync(tempDir, { recursive: true, force: true })
-    return { ok: false, error: e.message }
+
+    return { ok: true, fileCount }
+  } catch (err) {
+    return { ok: false, error: String(err) }
   }
 })
 
 ipcMain.handle('config-export', async () => {
+  const configPath = getDataPath('app-config.json')
+  if (!fs.existsSync(configPath)) return { ok: false, error: 'Config não encontrada' }
   try {
-    const config = readDataFile('project-config.json')
-    if (!config) return { ok: false, error: 'Nenhuma configuração encontrada.' }
-    
-    const backup = {
-      version: 2,
-      exportedAt: Date.now(),
-      appName: 'Arqchives',
-      type: 'config-only',
-      projectConfig: JSON.parse(config),
-    }
-    
-    const defaultPath = path.join(app.getPath('downloads'), `Arqchives-Config-${new Date().toISOString().split('T')[0]}.json`)
-    const result = await dialog.showSaveDialog({
-      title: 'Exportar Configurações',
-      defaultPath,
-      filters: [{ name: 'JSON Config', extensions: ['json'] }]
-    })
-    
-    if (result.canceled) return { ok: false, canceled: true }
-    
-    fs.writeFileSync(result.filePath, JSON.stringify(backup, null, 2), 'utf-8')
-    return { ok: true, path: result.filePath }
-  } catch (e: any) {
-    return { ok: false, error: e.message }
-  }
+    const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'))
+    return { ok: true, config }
+  } catch (err) { return { ok: false, error: String(err) } }
 })
 
-ipcMain.handle('config-import', async (_, config: any) => {
+ipcMain.handle('config-import', async (_e, config: any) => {
   try {
-    if (!config || !config.projectConfig) {
-      return { ok: false, error: 'Arquivo de configuração inválido.' }
-    }
-    writeDataFile('project-config.json', JSON.stringify(config.projectConfig))
+    writeDataFile('app-config.json', JSON.stringify(config, null, 2))
     return { ok: true }
-  } catch (e: any) {
-    return { ok: false, error: e.message }
+  } catch (err) { return { ok: false, error: String(err) } }
+})
+
+// ── Legacy Project APIs (for backward compatibility) ─────────────────────────────
+ipcMain.handle('select-root-folder', async () => {
+  const result = await dialog.showOpenDialog({
+    properties: ['openDirectory', 'createDirectory'],
+    title: 'Selecione a pasta raiz dos projetos',
+  })
+  if (!result.canceled && result.filePaths.length > 0) {
+    writeDataFile('app-root.txt', result.filePaths[0])
+    return result.filePaths[0]
   }
+  return null
+})
+
+ipcMain.handle('get-root-folder', () => readDataFile('app-root.txt'))
+
+ipcMain.handle('list-projects', () => {
+  const root = readDataFile('app-root.txt')
+  if (!root || !fs.existsSync(root)) return []
+  try {
+    return fs.readdirSync(root, { withFileTypes: true })
+      .filter(d => d.isDirectory())
+      .map(d => d.name)
+      .sort()
+  } catch { return [] }
+})
+
+ipcMain.handle('create-project', async (_e, { name, rootFolder }: { name: string; rootFolder: string }) => {
+  const projectPath = path.join(rootFolder, name)
+  if (fs.existsSync(projectPath)) throw new Error('Projeto já existe')
+
+  fs.mkdirSync(projectPath, { recursive: true })
+  fs.mkdirSync(path.join(projectPath, 'Tracks'), { recursive: true })
+  fs.mkdirSync(path.join(projectPath, 'Artwork'), { recursive: true })
+  fs.mkdirSync(path.join(projectPath, 'Exports'), { recursive: true })
+
+  const config = {
+    name,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    tracks: [],
+    albums: [],
+  }
+  fs.writeFileSync(path.join(projectPath, 'project.json'), JSON.stringify(config, null, 2))
+  return { success: true, path: projectPath }
+})
+
+ipcMain.handle('read-project-config', (_e, projectPath: string) => {
+  try {
+    const configPath = path.join(projectPath, 'project.json')
+    if (!fs.existsSync(configPath)) return null
+    return JSON.parse(fs.readFileSync(configPath, 'utf-8'))
+  } catch { return null }
+})
+
+ipcMain.handle('write-project-config', (_e, { projectPath, config }: { projectPath: string; config: any }) => {
+  try {
+    const configPath = path.join(projectPath, 'project.json')
+    fs.writeFileSync(configPath, JSON.stringify(config, null, 2))
+    return { success: true }
+  } catch (err) { return { success: false, error: String(err) } }
+})
+
+ipcMain.handle('read-file', (_e, filePath: string) => {
+  try {
+    if (!fs.existsSync(filePath)) return null
+    return fs.readFileSync(filePath, 'utf-8')
+  } catch { return null }
+})
+
+ipcMain.handle('write-file', (_e, { filePath, content }: { filePath: string; content: string }) => {
+  try {
+    fs.mkdirSync(path.dirname(filePath), { recursive: true })
+    fs.writeFileSync(filePath, content, 'utf-8')
+    return { success: true }
+  } catch (err) { return { success: false, error: String(err) } }
+})
+
+ipcMain.handle('copy-file-legacy', async (_e, { src, dest }: { src: string; dest: string }) => {
+  try {
+    fs.mkdirSync(path.dirname(dest), { recursive: true })
+    fs.copyFileSync(src, dest)
+    return { success: true }
+  } catch (err) { return { success: false, error: String(err) } }
+})
+
+ipcMain.handle('move-file-legacy', async (_e, { src, dest }: { src: string; dest: string }) => {
+  try {
+    fs.mkdirSync(path.dirname(dest), { recursive: true })
+    fs.renameSync(src, dest)
+    return { success: true }
+  } catch (err) { return { success: false, error: String(err) } }
+})
+
+ipcMain.handle('delete-file-legacy', (_e, filePath: string) => {
+  try {
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath)
+    return { success: true }
+  } catch (err) { return { success: false, error: String(err) } }
+})
+
+ipcMain.handle('open-folder', async (_e, folderPath: string) => {
+  try {
+    await shell.openPath(folderPath)
+    return { success: true }
+  } catch (err) { return { success: false, error: String(err) } }
+})
+
+ipcMain.handle('open-external', async (_e, url: string) => {
+  try {
+    await shell.openExternal(url)
+    return { success: true }
+  } catch (err) { return { success: false, error: String(err) } }
+})
+
+ipcMain.handle('save-album', (_e, { projectPath, album }: { projectPath: string; album: any }) => {
+  try {
+    const configPath = path.join(projectPath, 'project.json')
+    const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'))
+    const idx = config.albums.findIndex((a: any) => a.id === album.id)
+    if (idx >= 0) config.albums[idx] = album
+    else config.albums.push(album)
+    config.updatedAt = new Date().toISOString()
+    fs.writeFileSync(configPath, JSON.stringify(config, null, 2))
+    return { success: true }
+  } catch (err) { return { success: false, error: String(err) } }
+})
+
+ipcMain.handle('delete-album', (_e, { projectPath, albumId }: { projectPath: string; albumId: string }) => {
+  try {
+    const configPath = path.join(projectPath, 'project.json')
+    const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'))
+    config.albums = config.albums.filter((a: any) => a.id !== albumId)
+    config.updatedAt = new Date().toISOString()
+    fs.writeFileSync(configPath, JSON.stringify(config, null, 2))
+    return { success: true }
+  } catch (err) { return { success: false, error: String(err) } }
+})
+
+ipcMain.handle('export-project', async (_e, { projectPath, outputPath }: { projectPath: string; outputPath: string }) => {
+  const archiver = (await import('archiver')).default
+  const output = fs.createWriteStream(outputPath)
+  const archive = archiver('zip', { zlib: { level: 9 } })
+
+  return new Promise((resolve, reject) => {
+    output.on('close', () => resolve({ success: true, size: archive.pointer() }))
+    archive.on('error', (err) => reject({ success: false, error: String(err) }))
+    archive.pipe(output)
+    archive.directory(projectPath, false)
+    archive.finalize()
+  })
 })

@@ -67,8 +67,11 @@ export default function App() {
   // Handle playlist play events
   useEffect(() => {
     const handlePlaylistPlay = async (e: Event) => {
+      console.log('[App] handlePlaylistPlay called')
+      window.electronAPI?.debugLog('[App] handlePlaylistPlay called', { detail: (e as CustomEvent).detail })
       const ce = e as CustomEvent
       const { audioPath, index } = ce.detail
+      console.log('[App] playlist-play detail:', ce.detail)
       if (audioPath) {
         // Convert file path to file:// URL if needed
         let finalAudioPath = audioPath
@@ -80,6 +83,8 @@ export default function App() {
         if (!finalAudioPath || !finalAudioPath.startsWith('file://') && !finalAudioPath.startsWith('blob:') && !finalAudioPath.startsWith('http') && !finalAudioPath.startsWith('data:')) {
           return
         }
+        console.log('[App] Setting audioSrc:', finalAudioPath, 'isPlaying: true')
+        window.electronAPI?.debugLog('[App] Setting audioSrc', { finalAudioPath })
         setAudioSrc(finalAudioPath)
         setShowPlayer(true)
         setCurrentIndex(index)

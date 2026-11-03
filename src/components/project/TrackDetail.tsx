@@ -415,24 +415,41 @@ function TrackDetailOverview({
                         {track.audioVersions.map(v => (
                           <button
                             key={v.id}
-                            onClick={async () => {
-                              setActiveVersion(v)
-                              const url = await getLocalUrl(v.path)
-                              if (url) {
-                                setCurrentFilePath(v.path)
-                                addTracksToQueue([{
-                                  track,
-                                  album,
-                                  project,
-                                  audioVersion: v,
-                                  audioPath: url,
-                                }], { replace: true, playImmediately: true })
-                                // Dispatch event so App.tsx opens player and sets audioSrc
-                                window.dispatchEvent(new CustomEvent('arqchives:playlist-play', {
-                                  detail: { audioPath: url, index: 0, item: { track, album, project, audioVersion: v, audioPath: v.path } }
-                                }))
-                              }
-                            }}
+                            onClick={() => {
+                                console.log('[TrackDetail] Play button clicked (sync)')
+                                window.electronAPI?.debugLog('[TrackDetail] Play button clicked (sync)')
+                                // Use setTimeout to allow React to process the click
+                                setTimeout(async () => {
+                                  try {
+                                    console.log('[TrackDetail] Play button clicked (async)')
+                                    window.electronAPI?.debugLog('[TrackDetail] Play button clicked (async)')
+                                    setActiveVersion(v)
+                                    const url = await getLocalUrl(v.path)
+                                    window.electronAPI?.debugLog('[TrackDetail] getLocalUrl result', { url })
+                                    if (url) {
+                                      setCurrentFilePath(v.path)
+                                      addTracksToQueue([{
+                                        track,
+                                        album,
+                                        project,
+                                        audioVersion: v,
+                                        audioPath: url,
+                                      }], { replace: true, playImmediately: true })
+                                      // Dispatch event so App.tsx opens player and sets audioSrc
+                                      console.log('[TrackDetail] Dispatching event with url:', url)
+                                      window.electronAPI?.debugLog('[TrackDetail] Dispatching playlist-play event', { url })
+                                      window.dispatchEvent(new CustomEvent('arqchives:playlist-play', {
+                                        detail: { audioPath: url, index: 0, item: { track, album, project, audioVersion: v, audioPath: v.path } }
+                                      }))
+                                    } else {
+                                      window.electronAPI?.debugLog('[TrackDetail] getLocalUrl returned null')
+                                    }
+                                  } catch (err) {
+                                    console.error('[TrackDetail] Error in play button:', err)
+                                    window.electronAPI?.debugLog('[TrackDetail] Error in play button', { error: String(err) })
+                                  }
+                                }, 0)
+                              }}
                             className={cn(
                               "relative px-4 py-3 rounded-xl text-sm font-medium transition-all text-left w-full overflow-hidden",
                               isActiveVersion(v) ? "shadow-lg" : "hover:bg-white/5 before:hidden",
