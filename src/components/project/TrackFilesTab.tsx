@@ -9,8 +9,10 @@ import { cn, formatFileSize, getFileIcon } from '@/lib/utils'
 import { Button } from '@/components/ui/Button'
 import { ContextMenu, useContextMenu, createFileContextMenuItems } from '@/components/ui/ContextMenu'
 import { getFolderIconConfig, getFolderColorVar } from '@/lib/folderIcons'
-import { FileDestinationPicker, resolveFileDestination } from './FileDestinationPicker'
 import type { FileDestinationOption } from './FileDestinationPicker'
+import { FileImportPreviewModal } from './FileImportPreviewModal'
+import type { SelectedImportFile } from './FileImportPreviewModal'
+import { FilePreviewThumbnail } from './FilePreviewThumbnail'
 import { StemsImportModal } from './StemsImportModal'
 import type { StemArchiveFile, StemImportSelection } from './StemsImportModal'
 
@@ -37,14 +39,10 @@ export function TrackFilesTab({ track, album, project, paths, viewMode = 'grid' 
   const [folders, setFolders] = useState<Record<string, Array<{ name: string; path: string; ext: string; size: number; isDirectory: boolean }>>>({})
   const [loading, setLoading] = useState(true)
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set())
+  const [expandedGridFolders, setExpandedGridFolders] = useState<Set<string>>(new Set())
   const [renaming, setRenaming] = useState<string | null>(null)
   const [renameValue, setRenameValue] = useState('')
-  const [pendingDestination, setPendingDestination] = useState<{
-    filePath: string
-    remainingPaths: string[]
-    choices: FileDestinationOption[]
-    reason: 'no-match' | 'multiple'
-  } | null>(null)
+  const [pendingImportPaths, setPendingImportPaths] = useState<string[] | null>(null)
   const [stemArchiveFiles, setStemArchiveFiles] = useState<StemArchiveFile[] | null>(null)
 
   // Context menu
@@ -123,29 +121,6 @@ export function TrackFilesTab({ track, album, project, paths, viewMode = 'grid' 
     addTrackFile(project.id, album.id, track.id, result.newPath)
   }
 
-  const importFiles = async (filePaths: string[]) => {
-    for (let index = 0; index < filePaths.length; index += 1) {
-      const filePath = filePaths[index]
-      const decision = resolveFileDestination(filePath, destinations, projectConfig.tags)
-      if ('destination' in decision) {
-        await copyFileToFolder(filePath, decision.destination)
-        continue
-      }
-      if (decision.choices.length === 0) {
-        window.alert('Esta faixa não possui pastas configuradas para receber arquivos.')
-        continue
-      }
-      setPendingDestination({
-        filePath,
-        remainingPaths: filePaths.slice(index + 1),
-        choices: decision.choices,
-        reason: decision.reason,
-      })
-      return
-    }
-    await loadAllFiles()
-  }
-
   const handleAddFiles = async () => {
     const result = await window.electronAPI?.selectFiles({
       title: 'Adicionar arquivos à faixa',
@@ -153,16 +128,16 @@ export function TrackFilesTab({ track, album, project, paths, viewMode = 'grid' 
       multiple: true,
     })
     if (result?.length) {
-      await importFiles(result)
+      setPendingImportPaths(result)
     }
   }
 
-  const handleChooseDestination = async (destination: FileDestinationOption) => {
-    if (!pendingDestination) return
-    const { filePath, remainingPaths } = pendingDestination
-    setPendingDestination(null)
-    await copyFileToFolder(filePath, destination)
-    await importFiles(remainingPaths)
+  const handleConfirmImport = async (files: Array<SelectedImportFile & { destination: FileDestinationOption }>) => {
+    for (const file of files) {
+      await copyFileToFolder(file.path, file.destination)
+    }
+    setPendingImportPaths(null)
+    await loadAllFiles()
   }
 
   const handleSelectStemArchives = async () => {
@@ -289,6 +264,14 @@ export function TrackFilesTab({ track, album, project, paths, viewMode = 'grid' 
     })
   }
 
+  const toggleGridFolder = (folderName: string) => {
+    setExpandedGridFolders(prev => {
+      const next = new Set(prev)
+      next.has(folderName) ? next.delete(folderName) : next.add(folderName)
+      return next
+    })
+  }
+
   if (loading) {
     return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-white/20 border-t-white rounded-full animate-spin" /></div>
   }
@@ -316,56 +299,50 @@ export function TrackFilesTab({ track, album, project, paths, viewMode = 'grid' 
         {/* File count */}
         <p className="text-caption text-muted">{totalFiles} arquivo{totalFiles !== 1 ? 's' : ''} no total</p>
 
-        {/* GRID VIEW - Folders as cards (each independent) */}
+        {/* GRID VIEW - files grouped into visual galleries by folder */}
         {viewMode === 'grid' && (
           <AnimatePresence>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-md">
-              {Object.entries(allFolders).map(([folderName, _folderPath]) => {
+            <div className="space-y-xl">
+              {Object.entries(allFolders).length === 0 ? (
+                <div className="py-2xl text-center text-muted">Nenhuma pasta configurada na faixa</div>
+              ) : Object.entries(allFolders).map(([folderName]) => {
                 const files = groupedFiles[folderName] || []
-                const isExpanded = expandedFolders.has(folderName)
                 const folderConfig = getFolderIconConfig(folderName)
+                const isExpanded = expandedGridFolders.has(folderName)
 
                 return (
                   <motion.div
                     key={folderName}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    className="bg-elevated/50 border border-subtle rounded-xl overflow-hidden"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="space-y-sm"
                   >
-                    {/* Folder Header */}
                     <button
-                      onClick={() => toggleFolder(folderName)}
-                      className="w-full flex items-center gap-md p-md hover:bg-hover trans-colors text-left focus-ring"
+                      type="button"
+                      aria-expanded={isExpanded}
+                      onClick={() => toggleGridFolder(folderName)}
+                      className="flex w-full items-center gap-sm border-b border-subtle pb-sm text-left focus-ring"
                     >
-                      <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: getFolderColorVar(folderName) }}>
-                        <span className="text-lg">{folderConfig.icon}</span>
+                      <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md" style={{ backgroundColor: getFolderColorVar(folderName) }}>
+                        <span className="text-sm">{folderConfig.icon}</span>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-primary truncate text-sm">{folderName}</p>
-                        <p className="text-caption text-muted">{files.length} arquivo{files.length !== 1 ? 's' : ''}</p>
-                      </div>
-                      <ChevronDown className={cn("w-4 h-4 text-muted transition-transform", isExpanded && "rotate-180")} />
+                      <h4 className="min-w-0 truncate text-sm font-medium text-primary">{folderName}</h4>
+                      <span className="text-caption text-muted">{files.length} arquivo{files.length !== 1 ? 's' : ''}</span>
+                      <ChevronDown className={cn("ml-auto h-4 w-4 flex-shrink-0 text-muted transition-transform", isExpanded && "rotate-180")} />
                     </button>
-
-                    {/* Files List */}
-                    <AnimatePresence>
+                    <AnimatePresence initial={false}>
                       {isExpanded && (
                         <motion.div
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: 'auto' }}
-                          exit={{ opacity: 0, height: 0 }}
-                          className="border-t border-subtle overflow-hidden bg-elevated/30"
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          className="overflow-hidden"
                         >
                           {files.length === 0 ? (
-                            <div className="p-lg text-center text-muted text-sm">
-                              Pasta vazia
-                              <Button variant="ghost" size="sm" className="mt-sm" onClick={handleAddFiles}>
-                                <Plus className="w-3.5 h-3.5 mr-xs" /> Adicionar
-                              </Button>
-                            </div>
+                            <p className="py-sm text-sm text-muted">Pasta vazia</p>
                           ) : (
-                            <div className="divide-y divide-subtle max-h-72 overflow-y-auto">
+                            <div className="grid grid-cols-2 gap-3 pt-sm sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5">
                               {files.map((file, index) => (
                                 <FileRow
                                   key={file.path}
@@ -396,8 +373,7 @@ export function TrackFilesTab({ track, album, project, paths, viewMode = 'grid' 
 
         {/* LIST VIEW - Collapsible folders with compact headers */}
         {viewMode === 'list' && (
-          <div className="bg-elevated/50 border border-subtle rounded-xl overflow-hidden">
-            <div className="divide-y divide-subtle max-h-[60vh] overflow-y-auto">
+          <div>
               {Object.keys(allFolders).length === 0 ? (
                 <div className="p-2xl text-center text-muted">Nenhuma pasta configurada na faixa</div>
               ) : (
@@ -413,21 +389,20 @@ export function TrackFilesTab({ track, album, project, paths, viewMode = 'grid' 
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -10 }}
                         style={{ transitionDelay: `${folderIndex * 0.03}s` }}
+                        className="space-y-sm py-sm first:pt-0"
                       >
-                        {/* Folder Header Row - Click to toggle */}
                         <button
+                          type="button"
+                          aria-expanded={isExpanded}
                           onClick={() => toggleFolder(folderName)}
-                          className="grid grid-cols-[40px_1fr_80px_40px] gap-sm px-md py-sm items-center w-full text-left hover:bg-hover trans-colors focus-ring"
+                          className="flex w-full items-center gap-sm border-b border-subtle pb-sm text-left focus-ring"
                         >
-                          <div className="w-7 h-7 rounded flex items-center justify-center flex-shrink-0" style={{ backgroundColor: getFolderColorVar(folderName) }}>
-                            <span className="text-base">{folderConfig.icon}</span>
+                          <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md" style={{ backgroundColor: getFolderColorVar(folderName) }}>
+                            <span className="text-sm">{folderConfig.icon}</span>
                           </div>
-                          <div className="flex-1 min-w-0 flex items-center gap-sm">
-                            <ChevronDown className={cn("w-3.5 h-3.5 text-muted transition-transform flex-shrink-0", isExpanded && "rotate-180")} />
-                            <p className="text-sm font-medium text-secondary truncate">{folderName}</p>
-                          </div>
-                          <span className="text-right text-caption text-muted font-mono">{files.length} arquivo{files.length !== 1 ? 's' : ''}</span>
-                          <div className="flex items-center gap-xs opacity-50" />
+                          <h4 className="min-w-0 truncate text-sm font-medium text-primary">{folderName}</h4>
+                          <span className="text-caption text-muted">{files.length} arquivo{files.length !== 1 ? 's' : ''}</span>
+                          <ChevronDown className={cn("ml-auto h-4 w-4 flex-shrink-0 text-muted transition-transform", isExpanded && "rotate-180")} />
                         </button>
 
                         {/* Files in this folder - Collapsible */}
@@ -437,33 +412,34 @@ export function TrackFilesTab({ track, album, project, paths, viewMode = 'grid' 
                               initial={{ opacity: 0, height: 0 }}
                               animate={{ opacity: 1, height: 'auto' }}
                               exit={{ opacity: 0, height: 0 }}
+                              className="overflow-hidden"
                             >
                               {files.length > 0 ? (
-                                files.map((file, fileIndex) => (
-                                  <FileRow
-                                    key={file.path}
-                                    file={file}
-                                    projectColor={project.color}
-                                    renaming={renaming}
-                                    renameValue={renameValue}
-                                    onRenameChange={setRenameValue}
-                                    onStartRename={startRename}
-                                    onRename={handleRenameFile}
-                                    onOpen={handleOpenFile}
-                                    onDelete={handleDeleteFile}
-                                    onContextMenu={handleFileContextMenu}
-                                    isListView
-                                    index={fileIndex}
-                                  />
-                                ))
+                                <div className="pt-xs">
+                                  {files.map((file, fileIndex) => (
+                                    <FileRow
+                                      key={file.path}
+                                      file={file}
+                                      projectColor={project.color}
+                                      renaming={renaming}
+                                      renameValue={renameValue}
+                                      onRenameChange={setRenameValue}
+                                      onStartRename={startRename}
+                                      onRename={handleRenameFile}
+                                      onOpen={handleOpenFile}
+                                      onDelete={handleDeleteFile}
+                                      onContextMenu={handleFileContextMenu}
+                                      isListView
+                                      index={fileIndex}
+                                    />
+                                  ))}
+                                </div>
                               ) : (
-                                <div className="grid grid-cols-[40px_1fr_80px_40px] gap-sm px-md py-md items-center text-center text-muted border-t border-subtle">
-                                  <div className="col-span-4">
-                                    Pasta vazia
-                                    <Button variant="ghost" size="sm" className="ml-sm" onClick={(e) => { e.stopPropagation(); handleAddFiles() }}>
-                                      <Plus className="w-3.5 h-3.5 mr-xs" /> Adicionar
-                                    </Button>
-                                  </div>
+                                <div className="py-sm text-sm text-muted">
+                                  Pasta vazia
+                                  <Button variant="ghost" size="sm" className="ml-sm" onClick={(e) => { e.stopPropagation(); handleAddFiles() }}>
+                                    <Plus className="w-3.5 h-3.5 mr-xs" /> Adicionar
+                                  </Button>
                                 </div>
                               )}
                             </motion.div>
@@ -474,7 +450,6 @@ export function TrackFilesTab({ track, album, project, paths, viewMode = 'grid' 
                   })}
                 </AnimatePresence>
               )}
-            </div>
           </div>
         )}
       </div>
@@ -487,17 +462,15 @@ export function TrackFilesTab({ track, album, project, paths, viewMode = 'grid' 
           onClose={closeMenu}
         />
       )}
-      <AnimatePresence>
-        {pendingDestination && (
-          <FileDestinationPicker
-            fileName={pendingDestination.filePath.split(/[\\/]/).pop() || pendingDestination.filePath}
-            choices={pendingDestination.choices}
-            reason={pendingDestination.reason}
-            onChoose={handleChooseDestination}
-            onClose={() => setPendingDestination(null)}
-          />
-        )}
-      </AnimatePresence>
+      {pendingImportPaths && (
+        <FileImportPreviewModal
+          files={pendingImportPaths}
+          destinations={destinations}
+          tags={projectConfig.tags}
+          onImport={handleConfirmImport}
+          onClose={() => setPendingImportPaths(null)}
+        />
+      )}
       {stemArchiveFiles && (
         <StemsImportModal
           files={stemArchiveFiles}
@@ -530,7 +503,9 @@ interface FileRowProps {
 
 function FileRow({ file, projectColor, renaming, renameValue, onRenameChange, onStartRename, onRename, onOpen, onDelete, onContextMenu, isListView, index }: FileRowProps) {
   const isRenaming = renaming === file.path
-  const rowStyle = isListView ? "grid grid-cols-[40px_1fr_80px_40px] gap-sm px-md py-sm items-center hover:bg-hover trans-colors" : "flex items-center gap-md p-sm hover:bg-hover trans-colors"
+  const rowStyle = isListView
+    ? "grid grid-cols-[40px_1fr_80px_40px] gap-sm px-md py-sm items-center hover:bg-hover trans-colors"
+    : "min-w-0 overflow-hidden rounded-lg border border-subtle bg-elevated/40 trans-colors hover:border-white/15"
 
   return (
     <motion.div
@@ -540,13 +515,46 @@ function FileRow({ file, projectColor, renaming, renameValue, onRenameChange, on
       className={cn(rowStyle, "group")}
       onContextMenu={(e) => onContextMenu(e, file)}
     >
-      {/* File Icon */}
-      <div className="w-7 h-7 rounded flex items-center justify-center flex-shrink-0" style={{ backgroundColor: `hsl(var(--project-color) / var(--project-color-subtle))` }}>
-        {getFileIcon(file.name)}
-      </div>
+      {isListView ? (
+        <div className="w-7 h-7 rounded flex items-center justify-center flex-shrink-0" style={{ backgroundColor: `hsl(var(--project-color) / var(--project-color-subtle))` }}>
+          {getFileIcon(file.name)}
+        </div>
+      ) : (
+        <div>
+          <FilePreviewThumbnail path={file.path} name={file.name} />
+          <div className="p-2.5">
+            <div className="min-w-0">
+              {isRenaming ? (
+                <input
+                  value={renameValue}
+                  onChange={e => onRenameChange(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && onRename(file.path)}
+                  onBlur={() => onRename(file.path)}
+                  className="w-full bg-neutral-800 border border-neutral-600 rounded px-sm py-xs text-sm text-white focus-ring"
+                  autoFocus
+                />
+              ) : (
+                <p className="truncate text-xs font-medium text-primary" title={file.name}>{file.name}</p>
+              )}
+              <p className="mt-0.5 text-[11px] text-muted">{formatFileSize(file.size)}</p>
+            </div>
+            <div className="mt-2 flex items-center justify-end gap-1 opacity-100 trans-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
+              <button onClick={(e) => { e.stopPropagation(); onOpen(file.path) }} className="flex h-7 w-7 items-center justify-center rounded bg-white/5 text-neutral-400 hover:bg-white/10 hover:text-white trans-colors focus-ring" title="Abrir">
+                <ExternalLink className="w-3.5 h-3.5" />
+              </button>
+              <button onClick={(e) => { e.stopPropagation(); onStartRename(file) }} className="flex h-7 w-7 items-center justify-center rounded bg-white/5 text-neutral-400 hover:bg-white/10 hover:text-white trans-colors focus-ring" title="Renomear">
+                <Edit2 className="w-3.5 h-3.5" />
+              </button>
+              <button onClick={(e) => { e.stopPropagation(); onDelete(file.path, file.folder) }} className="flex h-7 w-7 items-center justify-center rounded bg-white/5 text-neutral-400 hover:bg-red-600/20 hover:text-red-400 trans-colors focus-ring" title="Deletar">
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* File Name / Rename Input */}
-      <div className="flex-1 min-w-0">
+      {isListView && <div className="flex-1 min-w-0">
         {isRenaming ? (
           <input
             value={renameValue}
@@ -560,7 +568,7 @@ function FileRow({ file, projectColor, renaming, renameValue, onRenameChange, on
           <p className="text-sm font-medium text-primary truncate">{file.name}</p>
         )}
         {!isListView && <p className="text-caption text-muted">{formatFileSize(file.size)}</p>}
-      </div>
+      </div>}
 
       {/* List view only: Size column */}
       {isListView && (
@@ -568,7 +576,7 @@ function FileRow({ file, projectColor, renaming, renameValue, onRenameChange, on
       )}
 
       {/* Actions */}
-      <div className={cn("flex items-center gap-xs", isListView ? "opacity-100" : "opacity-0 group-hover:opacity-100 trans-opacity")}>
+      {isListView && <div className="flex items-center gap-xs opacity-100">
         <button onClick={(e) => { e.stopPropagation(); onOpen(file.path) }} className="w-7 h-7 rounded bg-white/5 hover:bg-white/10 flex items-center justify-center text-neutral-400 hover:text-white trans-colors focus-ring" title="Abrir">
           <ExternalLink className="w-3.5 h-3.5" />
         </button>
@@ -578,7 +586,7 @@ function FileRow({ file, projectColor, renaming, renameValue, onRenameChange, on
         <button onClick={(e) => { e.stopPropagation(); onDelete(file.path, file.folder) }} className="w-7 h-7 rounded bg-white/5 hover:bg-red-600/20 flex items-center justify-center text-neutral-400 hover:text-red-400 trans-colors focus-ring" title="Deletar">
           <Trash2 className="w-3.5 h-3.5" />
         </button>
-      </div>
+      </div>}
     </motion.div>
   )
 }

@@ -274,9 +274,10 @@ export default function ProjectOverview({ project }: { project: Project }) {
 
   const isAlbumView = !!selectedAlbumId && !selectedTrack
   const isTrackView = !!selectedTrack
+  const activeViewMode = isAlbumView || isTrackView ? trackViewMode : viewMode
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full min-h-0">
       {/* Unified Header - always shows search/filter/view controls, left side switches */}
       <motion.header
         initial={{ opacity: 0, y: -20 }}
@@ -400,25 +401,25 @@ export default function ProjectOverview({ project }: { project: Project }) {
               </div>
             )}
 
-            {/* View Mode - album grid/list (project view) or track grid/list (album view) */}
+            {/* View Mode - albums in project view, tracks and files in album/track views */}
             <div className="flex bg-neutral-900 border border-neutral-700 rounded-lg overflow-hidden hidden sm:flex">
               <button
-                onClick={() => isAlbumView ? setTrackViewMode('grid') : setViewMode('grid')}
+                onClick={() => isAlbumView || isTrackView ? setTrackViewMode('grid') : setViewMode('grid')}
                 className={cn(
                   "p-2 trans-colors focus-ring",
-                  (isAlbumView ? trackViewMode : viewMode) === 'grid' ? 'bg-white/10 text-white' : 'text-neutral-400 hover:text-white'
+                  activeViewMode === 'grid' ? 'bg-white/10 text-white' : 'text-neutral-400 hover:text-white'
                 )}
-                title={isAlbumView ? "Grade (faixas)" : "Grade (álbuns)"}
+                title={isTrackView ? "Grade (arquivos)" : isAlbumView ? "Grade (faixas)" : "Grade (álbuns)"}
               >
                 <Grid className="w-5 h-5" />
               </button>
               <button
-                onClick={() => isAlbumView ? setTrackViewMode('list') : setViewMode('list')}
+                onClick={() => isAlbumView || isTrackView ? setTrackViewMode('list') : setViewMode('list')}
                 className={cn(
                   "p-2 trans-colors focus-ring",
-                  (isAlbumView ? trackViewMode : viewMode) === 'list' ? 'bg-white/10 text-white' : 'text-neutral-400 hover:text-white'
+                  activeViewMode === 'list' ? 'bg-white/10 text-white' : 'text-neutral-400 hover:text-white'
                 )}
-                title={isAlbumView ? "Lista (faixas)" : "Lista (álbuns)"}
+                title={isTrackView ? "Lista (arquivos)" : isAlbumView ? "Lista (faixas)" : "Lista (álbuns)"}
               >
                 <List className="w-5 h-5" />
               </button>
@@ -457,8 +458,8 @@ export default function ProjectOverview({ project }: { project: Project }) {
       </motion.header>
 
       {/* Content - flex row: main content + playlist */}
-      <div className="flex flex-1 overflow-hidden">
-        <main className="flex-1 overflow-hidden p-4">
+      <div className="flex flex-1 min-h-0 overflow-hidden">
+        <main className="flex-1 min-h-0 overflow-hidden p-4">
           <AnimatePresence mode="wait">
             {/* Track Detail */}
             {selectedTrack && selectedAlbum && (
@@ -675,7 +676,7 @@ function AlbumDetailContent({ albumId, project, onOpenTrack, trackViewMode, sele
   })
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full min-h-0">
       {/* Tabs */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
@@ -694,7 +695,7 @@ function AlbumDetailContent({ albumId, project, onOpenTrack, trackViewMode, sele
       <motion.main
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex-1 overflow-auto p-4"
+        className="flex-1 min-h-0 overflow-y-auto p-4"
       >
         {activeTab === 'tracklist' && (
           <Tracklist

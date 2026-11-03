@@ -149,7 +149,7 @@ export default function TrackDetail({ trackId, albumId, project, onBack, trackVi
   }, [])
 
   return (
-    <div className="flex flex-col h-full bg-neutral-950">
+    <div className="flex flex-col h-full min-h-0 bg-neutral-950">
       {/* Tabs */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
@@ -168,7 +168,7 @@ export default function TrackDetail({ trackId, albumId, project, onBack, trackVi
       <motion.main
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex-1 overflow-hidden"
+        className="flex-1 min-h-0 overflow-hidden"
       >
         {activeTab === 'player' ? (
           <TrackDetailOverview
@@ -191,7 +191,7 @@ export default function TrackDetail({ trackId, albumId, project, onBack, trackVi
           />
         ) : (
           // Other tabs: with padding and scroll
-          <div className="overflow-auto p-4 md:p-6 max-w-6xl mx-auto">
+          <div className="h-full min-h-0 overflow-y-auto p-4 md:p-6 max-w-6xl mx-auto">
             {activeTab === 'info' && (
               <TrackAIInfoTab
                 track={track}
