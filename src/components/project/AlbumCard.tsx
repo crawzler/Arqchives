@@ -17,10 +17,11 @@ interface AlbumCardProps {
   projectColor: string
   onClick: () => void
   onEdit: (e: React.MouseEvent, album: import('@/types').Album) => void
+  onDelete: (album: import('@/types').Album) => void
   onContextMenu?: (e: React.MouseEvent) => void
 }
 
-export default function AlbumCard({ album, project, projectColor, onClick, onEdit, onContextMenu }: AlbumCardProps) {
+export default function AlbumCard({ album, project, projectColor, onClick, onEdit, onDelete, onContextMenu }: AlbumCardProps) {
   const { getLocalUrl } = useFileOperations()
   const { generateAlbumPaths } = usePathGenerator()
   const addAlbumToQueue = useAddAlbumToQueue()
@@ -48,10 +49,7 @@ export default function AlbumCard({ album, project, projectColor, onClick, onEdi
         navigator.clipboard.writeText(paths.albumPath)
       },
       () => {
-        // Deletar álbum
-        if (window.confirm(`Deletar "${album.title}"?`)) {
-          // TODO: Implement delete album action
-        }
+        onDelete(album)
       },
       () => {
         // Abrir pasta do álbum

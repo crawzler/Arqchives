@@ -12,6 +12,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   selectFiles: (opts?: { title?: string; filters?: Electron.FileFilter[]; multiple?: boolean }) => ipcRenderer.invoke('select-files', opts),
   listFiles: (folderPath: string) => ipcRenderer.invoke('list-files', folderPath),
   listFilesRecursive: (folderPath: string) => ipcRenderer.invoke('list-files-recursive', folderPath),
+  inspectStemArchive: (zipPath: string) => ipcRenderer.invoke('inspect-stem-archive', zipPath),
+  importStemArchiveEntries: (zipPath: string, selections: Array<{ entryName: string; destFolder: string }>) =>
+    ipcRenderer.invoke('import-stem-archive-entries', zipPath, selections),
   fileExists: (filePath: string) => ipcRenderer.invoke('file-exists', filePath),
   openFile: (filePath: string) => ipcRenderer.invoke('open-file', filePath),
   revealFile: (filePath: string) => ipcRenderer.invoke('reveal-file', filePath),
@@ -79,6 +82,13 @@ declare global {
       selectFiles: (opts?: { title?: string; filters?: Electron.FileFilter[]; multiple?: boolean }) => Promise<string[] | null>
       listFiles: (folderPath: string) => Promise<Array<{ name: string; isDirectory: boolean; path: string; ext: string; size: number }>>
       listFilesRecursive: (folderPath: string) => Promise<Array<{ name: string; isDirectory: boolean; path: string; ext: string; size: number; relativePath: string }>>
+      inspectStemArchive: (zipPath: string) => Promise<{ ok: boolean; entries?: Array<{ entryName: string; name: string; size: number }>; error?: string }>
+      importStemArchiveEntries: (zipPath: string, selections: Array<{ entryName: string; destFolder: string }>) => Promise<{
+        ok: boolean
+        imported: Array<{ entryName: string; newPath: string }>
+        errors?: Array<{ entryName: string; error: string }>
+        error?: string
+      }>
       fileExists: (filePath: string) => Promise<boolean>
       openFile: (filePath: string) => Promise<void>
       revealFile: (filePath: string) => Promise<void>

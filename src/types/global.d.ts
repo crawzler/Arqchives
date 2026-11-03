@@ -12,6 +12,13 @@ interface ElectronAPI {
   selectFiles: (opts?: { title?: string; filters?: Electron.FileFilter[]; multiple?: boolean }) => Promise<string[] | null>
   listFiles: (folderPath: string) => Promise<Array<{ name: string; isDirectory: boolean; path: string; ext: string; size: number }>>
   listFilesRecursive: (folderPath: string) => Promise<Array<{ name: string; isDirectory: boolean; path: string; ext: string; size: number; relativePath: string }>>
+  inspectStemArchive: (zipPath: string) => Promise<{ ok: boolean; entries?: Array<{ entryName: string; name: string; size: number }>; error?: string }>
+  importStemArchiveEntries: (zipPath: string, selections: Array<{ entryName: string; destFolder: string }>) => Promise<{
+    ok: boolean
+    imported: Array<{ entryName: string; newPath: string }>
+    errors?: Array<{ entryName: string; error: string }>
+    error?: string
+  }>
   fileExists: (filePath: string) => Promise<boolean>
   openFile: (filePath: string) => Promise<void>
   revealFile: (filePath: string) => Promise<void>

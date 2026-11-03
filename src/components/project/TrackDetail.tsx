@@ -65,11 +65,33 @@ export default function TrackDetail({ trackId, albumId, project, onBack, trackVi
   }, [audioPath])
 
   const handleSaveTrack = async (form: any) => {
-    let audioPath = form.audioPath
-    if (audioPath) {
-      audioPath = await organizeFile(audioPath, project.name, album.title, form.title, form.number)
+    const { audioPath: selectedAudioPath, audioVersions: formAudioVersions, ...trackChanges } = form
+    let audioVersions: import('@/types').AudioVersion[] = formAudioVersions || track.audioVersions || []
+
+    if (selectedAudioPath && selectedAudioPath !== track.audioVersions?.[0]?.path) {
+      const organizedPath = await organizeFile(
+        selectedAudioPath,
+        project.name,
+        album.title,
+        form.title,
+        form.number,
+        undefined,
+        album.type
+      )
+      const versionMode = trackChanges.versionMode || track.versionMode
+      const newVersion: import('@/types').AudioVersion = {
+        id: generateId(),
+        label: versionMode === 'dual' ? 'Pré-Mix' : 'Master',
+        type: versionMode === 'dual' ? 'mix' : 'master',
+        path: organizedPath,
+        createdAt: Date.now(),
+      }
+      audioVersions = audioVersions.length > 0
+        ? [newVersion, ...audioVersions.slice(1)]
+        : [newVersion]
     }
-    updateTrack(project.id, album.id, track.id, { ...form, audioPath })
+
+    updateTrack(project.id, album.id, track.id, { ...trackChanges, audioVersions })
     setShowEditModal(false)
   }
 

@@ -314,7 +314,7 @@ export interface AppState {
   reorderAlbums: (projectId: string, albums: Album[]) => void
 
   // Tracks (per album)
-  addTrack: (projectId: string, albumId: string, track: Omit<Track, 'id' | 'createdAt'>) => Track
+  addTrack: (projectId: string, albumId: string, track: Partial<Omit<Track, 'id' | 'createdAt'>>) => Track
   updateTrack: (projectId: string, albumId: string, trackId: string, changes: Partial<Track>) => void
   deleteTrack: (projectId: string, albumId: string, trackId: string) => void
   reorderTracks: (projectId: string, albumId: string, tracks: Track[]) => void

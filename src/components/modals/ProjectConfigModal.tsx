@@ -381,9 +381,9 @@ function StructureTab({ config, onChange, expanded, onToggle, sortedItems }: {
   sortedItems: (items: string[]) => string[]
 }) {
   const allFolders = [
-    { key: 'projectSubfolders', title: 'Pastas do Projeto', tagConfigKey: 'projectFolders' },
-    { key: 'albumSubfolders', title: 'Subpastas do Álbum', tagConfigKey: 'albumFolders' },
-    { key: 'trackSubfolders', title: 'Subpastas da Faixa', tagConfigKey: 'trackFolders' },
+    { key: 'projectSubfolders', title: 'Pastas do Projeto', tagConfigKey: 'projectFolders', nestedTagConfigKey: undefined },
+    { key: 'albumSubfolders', title: 'Subpastas do Álbum', tagConfigKey: 'albumFolders', nestedTagConfigKey: undefined },
+    { key: 'trackSubfolders', title: 'Subpastas da Faixa', tagConfigKey: 'trackFolders', nestedTagConfigKey: 'trackSubfolders' },
   ] as const
 
   const [editingFolder, setEditingFolder] = useState<{ folderGroupKey: string; folderPath: string; isNew?: boolean } | null>(null)
@@ -392,7 +392,11 @@ function StructureTab({ config, onChange, expanded, onToggle, sortedItems }: {
   // Converte flat list + nested paths em tree structure
   const buildFolderTree = (folderGroupKey: string) => {
     const flatFolders = config.folderStructure[folderGroupKey as keyof typeof config.folderStructure] as string[]
-    const nestedConfig = config.folderTagConfig[allFolders.find(f => f.key === folderGroupKey)?.tagConfigKey as keyof typeof config.folderTagConfig] || {}
+    const folderConfig = allFolders.find(f => f.key === folderGroupKey)
+    const nestedConfig = {
+      ...(folderConfig ? config.folderTagConfig[folderConfig.tagConfigKey] : {}),
+      ...(folderConfig?.nestedTagConfigKey ? config.folderTagConfig[folderConfig.nestedTagConfigKey] || {} : {}),
+    }
     
     // Coleta todas as pastas: flat + nested paths (ex: "Stems/VOX")
     const allPaths = new Set<string>()
@@ -459,7 +463,10 @@ function StructureTab({ config, onChange, expanded, onToggle, sortedItems }: {
     }
     
     // Atualiza folderTagConfig - move as tags
-    const tagConfigKey = allFolders.find(f => f.key === folderGroupKey)?.tagConfigKey
+    const folderConfig = allFolders.find(f => f.key === folderGroupKey)
+    const tagConfigKey = folderConfig?.nestedTagConfigKey && folderPath.includes('/')
+      ? folderConfig.nestedTagConfigKey
+      : folderConfig?.tagConfigKey
     if (tagConfigKey) {
       const currentTags = config.folderTagConfig[tagConfigKey][folderPath] || []
       // Remove a chave antiga
@@ -477,11 +484,12 @@ function StructureTab({ config, onChange, expanded, onToggle, sortedItems }: {
     onChange(`folderStructure.${folderGroupKey}`, updatedFlat)
     
     // Remove do folderTagConfig (recursivamente)
-    const tagConfigKey = allFolders.find(f => f.key === folderGroupKey)?.tagConfigKey
-    if (tagConfigKey) {
-      Object.keys(config.folderTagConfig[tagConfigKey]).forEach(key => {
+    const folderConfig = allFolders.find(f => f.key === folderGroupKey)
+    const configKeys = [folderConfig?.tagConfigKey, folderConfig?.nestedTagConfigKey].filter(Boolean) as Array<keyof typeof config.folderTagConfig>
+    for (const configKey of configKeys) {
+      Object.keys(config.folderTagConfig[configKey] || {}).forEach(key => {
         if (key === folderPath || key.startsWith(folderPath + '/')) {
-          onChange(`folderTagConfig.${tagConfigKey}.${key}`, '__DELETE__')
+          onChange(`folderTagConfig.${configKey}.${key}`, '__DELETE__')
         }
       })
     }
@@ -489,7 +497,10 @@ function StructureTab({ config, onChange, expanded, onToggle, sortedItems }: {
   }
 
   const addFolder = (folderGroupKey: string, parentPath?: string) => {
-    const tagConfigKey = allFolders.find(f => f.key === folderGroupKey)?.tagConfigKey
+    const folderConfig = allFolders.find(f => f.key === folderGroupKey)
+    const tagConfigKey = parentPath && folderConfig?.nestedTagConfigKey
+      ? folderConfig.nestedTagConfigKey
+      : folderConfig?.tagConfigKey
     const flatFolders = config.folderStructure[folderGroupKey as keyof typeof config.folderStructure] as string[]
     
     // Conta irmãos existentes no mesmo nível
@@ -523,7 +534,10 @@ function StructureTab({ config, onChange, expanded, onToggle, sortedItems }: {
         onChange(`folderStructure.${folderGroupKey}`, flatFolders.filter(f => f !== folderPath))
       }
       // Remove do folderTagConfig
-      const tagConfigKey = allFolders.find(f => f.key === folderGroupKey)?.tagConfigKey
+      const folderConfig = allFolders.find(f => f.key === folderGroupKey)
+      const tagConfigKey = folderConfig?.nestedTagConfigKey && folderPath.includes('/')
+        ? folderConfig.nestedTagConfigKey
+        : folderConfig?.tagConfigKey
       if (tagConfigKey) {
         onChange(`folderTagConfig.${tagConfigKey}.${folderPath}`, '__DELETE__')
       }
@@ -537,7 +551,10 @@ function StructureTab({ config, onChange, expanded, onToggle, sortedItems }: {
     const folderName = folderPath.split('/').pop() || folderPath
     const isEditing = editingFolder?.folderGroupKey === folderGroupKey && editingFolder?.folderPath === folderPath
     const allowedTags = node.tags
-    const tagConfigKey = allFolders.find(f => f.key === folderGroupKey)?.tagConfigKey!
+    const folderConfig = allFolders.find(f => f.key === folderGroupKey)
+    const tagConfigKey = folderConfig?.nestedTagConfigKey && folderPath.includes('/')
+      ? folderConfig.nestedTagConfigKey
+      : folderConfig?.tagConfigKey!
     
     return (
       <div key={folderPath} className={depth > 0 ? 'ml-6' : ''}>

@@ -2,7 +2,7 @@ import { useCallback } from 'react'
 import { useAppStore } from '@/store/useAppStore'
 import { useFileOperations } from './useElectron'
 import { sanitizeFileName, generateId } from '@/lib/utils'
-import type { AlbumPaths, ProjectPaths, AudioVersion, Tag } from '@/types'
+import type { AlbumPaths, ProjectPaths, AudioVersion, Tag, ReleaseType } from '@/types'
 
 // ── Hook para geração de paths ─────────────────────────────────────────────────
 export function usePathGenerator() {
@@ -78,7 +78,7 @@ export function usePathGenerator() {
     
     // Para Single, usa a estrutura de track direto na pasta do álbum
     const isSingle = albumType === 'Single'
-    const subfoldersToUse = isSingle ? projectConfig.folderStructure.trackSubfolders : projectConfig.folderStructure.albumSubfolders
+    const subfoldersToUse = isSingle ? [] : projectConfig.folderStructure.albumSubfolders
     
     const albumSubfolders: Record<string, string> = {}
     for (const subfolder of subfoldersToUse) {
@@ -95,11 +95,17 @@ export function usePathGenerator() {
         for (const subfolder of projectConfig.folderStructure.trackSubfolders) {
           trackSubfolders[subfolder] = `${trackPath}\\${subfolder}`
         }
+        for (const subfolder of Object.keys(projectConfig.folderTagConfig.trackSubfolders || {})) {
+          const parentFolder = subfolder.split('/')[0]
+          if (projectConfig.folderStructure.trackSubfolders.includes(parentFolder)) {
+            trackSubfolders[subfolder] = `${trackPath}\\${subfolder.replace(/\//g, '\\')}`
+          }
+        }
       }
     }
 
     return { albumPath, albumSubfolders, trackPath, trackSubfolders }
-  }, [generateAlbumPath, generateTrackPath, projectConfig.folderStructure])
+  }, [generateAlbumPath, generateTrackPath, projectConfig.folderStructure, projectConfig.folderTagConfig.trackSubfolders])
 
   const getTagsForFile = useCallback((filePath: string): Tag[] => {
     const ext = filePath.slice(filePath.lastIndexOf('.')).toLowerCase()
@@ -219,9 +225,10 @@ export function useFileOrganizer() {
     albumTitle: string,
     trackTitle?: string,
     trackNumber?: string | number,
-    overrideMode?: 'move' | 'copy'
+    overrideMode?: 'move' | 'copy',
+    albumType?: ReleaseType
   ) => {
-    const paths = generateAlbumPaths(projectName, albumTitle, trackTitle, trackNumber)
+    const paths = generateAlbumPaths(projectName, albumTitle, trackTitle, trackNumber, albumType)
     const destFolder = getBestDestinationForFile(filePath, paths)
 
     if (!destFolder) {
@@ -312,21 +319,45 @@ export function useAlbumOperations() {
   const addAlbum = useCallback(async (data: any) => {
     if (!store.activeProjectId) return null
     const album = store.addAlbum(store.activeProjectId, data)
+    const initialTrack = album.type === 'Single'
+      ? store.addTrack(store.activeProjectId, album.id, {
+        title: album.title,
+        number: '',
+        status: 'idea',
+        positivePrompt: '',
+        mode: '',
+      })
+      : null
+
     if (album && store.appRoot) {
       const project = store.projects.find(p => p.id === store.activeProjectId)
       if (project) {
-        const paths = generateAlbumPaths(project.name, album.title, undefined, undefined, album.type)
+        const paths = generateAlbumPaths(
+          project.name,
+          album.title,
+          initialTrack?.title,
+          initialTrack?.number,
+          album.type
+        )
         await createFolderStructure(paths)
         
         // If coverFilePath is provided, organize it into the album's Artwork folder
         if (data.coverFilePath) {
-          const organizedCoverPath = await organizeFile(data.coverFilePath, project.name, album.title)
+          const organizedCoverPath = await organizeFile(
+            data.coverFilePath,
+            project.name,
+            album.title,
+            initialTrack?.title,
+            initialTrack?.number,
+            undefined,
+            album.type
+          )
           // Update album with the organized cover path
           store.updateAlbum(store.activeProjectId!, album.id, { coverPath: organizedCoverPath })
         }
       }
     }
-    return album
+    return initialTrack ? { ...album, tracks: [initialTrack] } : album
   }, [store, generateAlbumPaths, createFolderStructure, organizeFile])
 
   const addTrack = useCallback(async (albumId: string, data: any) => {
@@ -337,7 +368,15 @@ export function useAlbumOperations() {
 
     let finalAudioPath = data.audioPath
     if (data.audioPath && store.appRoot) {
-      finalAudioPath = await organizeFile(data.audioPath, project.name, album.title, data.title, data.number)
+      finalAudioPath = await organizeFile(
+        data.audioPath,
+        project.name,
+        album.title,
+        data.title,
+        data.number,
+        undefined,
+        album.type
+      )
     }
 
     return store.addTrack(store.activeProjectId!, albumId, {

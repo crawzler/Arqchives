@@ -9,6 +9,8 @@ import { cn, formatFileSize, getFileIcon } from '@/lib/utils'
 import { Button } from '@/components/ui/Button'
 import { ContextMenu, useContextMenu, createFileContextMenuItems } from '@/components/ui/ContextMenu'
 import { getFolderIconConfig, getFolderIconEmoji, getFolderColorVar } from '@/lib/folderIcons'
+import { FileDestinationPicker, resolveFileDestination } from './FileDestinationPicker'
+import type { FileDestinationOption } from './FileDestinationPicker'
 
 interface AlbumFilesTabProps {
   album: import('@/types').Album
@@ -28,12 +30,18 @@ interface FileItem {
 
 export function AlbumFilesTab({ album, project, paths, viewMode = 'grid' }: AlbumFilesTabProps) {
   const { listFiles, openFile, deleteFile, renameFile, ensureFolder, moveOrCopyFile } = useFileOperations()
-  const { removeAlbumFile, addAlbumFile } = useAppStore()
+  const { removeAlbumFile, addAlbumFile, projectConfig } = useAppStore()
   const [folders, setFolders] = useState<Record<string, Array<{ name: string; path: string; ext: string; size: number; isDirectory: boolean }>>>({})
   const [loading, setLoading] = useState(true)
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set())
   const [renaming, setRenaming] = useState<string | null>(null)
   const [renameValue, setRenameValue] = useState('')
+  const [pendingDestination, setPendingDestination] = useState<{
+    filePath: string
+    remainingPaths: string[]
+    choices: FileDestinationOption[]
+    reason: 'no-match' | 'multiple'
+  } | null>(null)
 
   // Context menu
   const { menuX, menuY, menuItems, openMenu, closeMenu } = useContextMenu()
@@ -76,22 +84,67 @@ export function AlbumFilesTab({ album, project, paths, viewMode = 'grid' }: Albu
     return groups
   }, [allFiles])
 
-  const handleAddFiles = async (folderName: string) => {
-    const folderPath = paths.albumSubfolders[folderName]
-    if (!folderPath) return
+  const destinations = Object.entries(paths.albumSubfolders).map(([folderName, folderPath]) => ({
+    id: `album:${folderName}`,
+    label: folderName,
+    path: folderPath,
+    tagIds: projectConfig.folderTagConfig.albumFolders[folderName] || [],
+  }))
+
+  const copyFileToFolder = async (filePath: string, destination: FileDestinationOption) => {
+    const folderResult = await ensureFolder(destination.path)
+    if (!folderResult.ok) {
+      window.alert(`Não foi possível preparar a pasta "${destination.label}": ${folderResult.error || 'erro desconhecido'}`)
+      return
+    }
+    const result = await moveOrCopyFile({ srcPath: filePath, destFolder: destination.path, mode: 'copy' })
+    if (!result.ok || !('newPath' in result) || !result.newPath) {
+      window.alert(`Não foi possível copiar "${filePath.split(/[\\/]/).pop()}": ${result.error || 'erro desconhecido'}`)
+      return
+    }
+    addAlbumFile(project.id, album.id, result.newPath)
+  }
+
+  const importFiles = async (filePaths: string[]) => {
+    for (let index = 0; index < filePaths.length; index += 1) {
+      const filePath = filePaths[index]
+      const decision = resolveFileDestination(filePath, destinations, projectConfig.tags)
+      if ('destination' in decision) {
+        await copyFileToFolder(filePath, decision.destination)
+        continue
+      }
+      if (decision.choices.length === 0) {
+        window.alert('Este álbum não possui pastas configuradas para receber arquivos.')
+        continue
+      }
+      setPendingDestination({
+        filePath,
+        remainingPaths: filePaths.slice(index + 1),
+        choices: decision.choices,
+        reason: decision.reason,
+      })
+      return
+    }
+    await loadAllFiles()
+  }
+
+  const handleAddFiles = async () => {
     const result = await window.electronAPI?.selectFiles({
-      title: `Adicionar arquivos à pasta ${folderName}`,
-      filters: [{ name: 'Todos', extensions: ['*'] }],
+      title: 'Adicionar arquivos ao álbum',
+      filters: [{ name: 'Todos os arquivos', extensions: ['*'] }],
       multiple: true,
     })
     if (result?.length) {
-      await ensureFolder(folderPath)
-      for (const filePath of result) {
-        await moveOrCopyFile({ srcPath: filePath, destFolder: folderPath, mode: 'copy' })
-        addAlbumFile(project.id, album.id, filePath)
-      }
-      loadAllFiles()
+      await importFiles(result)
     }
+  }
+
+  const handleChooseDestination = async (destination: FileDestinationOption) => {
+    if (!pendingDestination) return
+    const { filePath, remainingPaths } = pendingDestination
+    setPendingDestination(null)
+    await copyFileToFolder(filePath, destination)
+    await importFiles(remainingPaths)
   }
 
   const handleOpenFile = (filePath: string) => openFile(filePath)
@@ -104,9 +157,9 @@ export function AlbumFilesTab({ album, project, paths, viewMode = 'grid' }: Albu
   const handleRenameFile = async (filePath: string) => {
     if (!renameValue.trim()) return
     const result = await renameFile(filePath, renameValue)
-    if (result.ok) {
+    if (result.ok && 'newPath' in result && result.newPath) {
       removeAlbumFile(project.id, album.id, filePath)
-      addAlbumFile(project.id, album.id, result.newPath!)
+      addAlbumFile(project.id, album.id, result.newPath)
       loadAllFiles()
     }
     setRenaming(null)
@@ -149,7 +202,7 @@ export function AlbumFilesTab({ album, project, paths, viewMode = 'grid' }: Albu
         {/* Header */}
         <div className="flex items-center justify-between">
           <h3 className="text-body-sm font-medium text-secondary">Arquivos do Álbum</h3>
-          <Button variant="outline" size="sm" onClick={() => handleAddFiles('artwork')}>
+          <Button variant="outline" size="sm" onClick={handleAddFiles}>
             <Plus className="w-3.5 h-3.5 mr-xs" />
             <span>Adicionar</span>
           </Button>
@@ -202,7 +255,7 @@ export function AlbumFilesTab({ album, project, paths, viewMode = 'grid' }: Albu
                           {files.length === 0 ? (
                             <div className="p-lg text-center text-muted text-sm">
                               Pasta vazia
-                              <Button variant="ghost" size="sm" className="mt-sm" onClick={() => handleAddFiles(folderName)}>
+                              <Button variant="ghost" size="sm" className="mt-sm" onClick={handleAddFiles}>
                                 <Plus className="w-3.5 h-3.5 mr-xs" /> Adicionar
                               </Button>
                             </div>
@@ -302,7 +355,7 @@ export function AlbumFilesTab({ album, project, paths, viewMode = 'grid' }: Albu
                                 <div className="grid grid-cols-[40px_1fr_80px_40px] gap-sm px-md py-md items-center text-center text-muted border-t border-subtle">
                                   <div className="col-span-4">
                                     Pasta vazia
-                                    <Button variant="ghost" size="sm" className="ml-sm" onClick={(e) => { e.stopPropagation(); handleAddFiles(folderName) }}>
+                                    <Button variant="ghost" size="sm" className="ml-sm" onClick={(e) => { e.stopPropagation(); handleAddFiles() }}>
                                       <Plus className="w-3.5 h-3.5 mr-xs" /> Adicionar
                                     </Button>
                                   </div>
@@ -329,6 +382,17 @@ export function AlbumFilesTab({ album, project, paths, viewMode = 'grid' }: Albu
           onClose={closeMenu}
         />
       )}
+      <AnimatePresence>
+        {pendingDestination && (
+          <FileDestinationPicker
+            fileName={pendingDestination.filePath.split(/[\\/]/).pop() || pendingDestination.filePath}
+            choices={pendingDestination.choices}
+            reason={pendingDestination.reason}
+            onChoose={handleChooseDestination}
+            onClose={() => setPendingDestination(null)}
+          />
+        )}
+      </AnimatePresence>
     </>
   )
 }

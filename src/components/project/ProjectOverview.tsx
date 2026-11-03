@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Search, ChevronDown, Music2, ChevronLeft, Image as ImageIcon, Grid, List, FolderOpen, ListMusic } from 'lucide-react'
+import { Plus, Search, ChevronDown, Music2, ChevronLeft, Image as ImageIcon, Grid, List, FolderOpen, ListMusic, Trash2 } from 'lucide-react'
 import { useAppStore, useActiveProjectId, useAlbum, useTrack, useAddTracksToQueue, useSetPlaylistOpen, useAddAlbumToQueue, useActiveProject, usePlaylistIsOpen } from '@/store/useAppStore'
 import { PlaylistPanel } from '@/components/player/PlaylistPanel'
 import { useFileOperations, usePathGenerator, useAlbumOperations } from '@/hooks/useAlbumOperations'
@@ -28,7 +28,7 @@ import { Album } from '@/types'
 
 export default function ProjectOverview({ project }: { project: Project }) {
   const { albums, deleteAlbum, activeProjectId, updateAlbum } = useAppStore()
-  const { addAlbum: addAlbumWithFolders, organizeFile } = useAlbumOperations()
+  const { addAlbum: addAlbumWithFolders, organizeFile, createFolderStructure } = useAlbumOperations()
   const { revealFile, getLocalUrl } = useFileOperations()
   const { generateProjectPaths, generateAlbumPaths } = usePathGenerator()
   const setPlaylistOpen = useSetPlaylistOpen()
@@ -86,6 +86,26 @@ export default function ProjectOverview({ project }: { project: Project }) {
     state.albums[activeProjectId!]?.find(a => a.id === selectedAlbumId) || null
   )
 
+  const handleOpenAlbum = useCallback(async (album: Album) => {
+    setSelectedAlbumId(album.id)
+    if (album.type !== 'Single') {
+      setSelectedTrack(null)
+      return
+    }
+
+    const track = album.tracks[0] || useAppStore.getState().addTrack(project.id, album.id, {
+      title: album.title,
+      number: '',
+      status: 'idea',
+      positivePrompt: '',
+      mode: '',
+    })
+    setSelectedTrack(track)
+
+    const paths = generateAlbumPaths(project.name, album.title, track.title, track.number, album.type)
+    await createFolderStructure(paths)
+  }, [createFolderStructure, generateAlbumPaths, project])
+
   // Listen for navigation events from Sidebar
   useEffect(() => {
     const normalizePath = (p: string) => p.replace(/\\$/, '').toLowerCase()
@@ -110,7 +130,7 @@ export default function ProjectOverview({ project }: { project: Project }) {
       })
       
       if (targetAlbum) {
-        setSelectedAlbumId(targetAlbum.id)
+        void handleOpenAlbum(targetAlbum)
         return
       }
       
@@ -131,7 +151,7 @@ export default function ProjectOverview({ project }: { project: Project }) {
     }
     window.addEventListener('arqchives:navigate', handleNavigate)
     return () => window.removeEventListener('arqchives:navigate', handleNavigate)
-  }, [albums, activeProjectId, project, generateAlbumPaths])
+  }, [albums, activeProjectId, project, generateAlbumPaths, handleOpenAlbum])
 
   // Emit event when album selection changes for Sidebar sync
   useEffect(() => {
@@ -176,11 +196,37 @@ export default function ProjectOverview({ project }: { project: Project }) {
     setShowEditAlbum(true)
   }
 
+  const handleDeleteAlbum = (album: Album) => {
+    const confirmed = window.confirm(
+      `Remover "${album.title}" do app? Os arquivos e a pasta do álbum permanecerão no disco.`
+    )
+    if (!confirmed) return
+
+    deleteAlbum(project.id, album.id)
+    if (selectedAlbumId === album.id) {
+      setSelectedAlbumId(null)
+      setSelectedTrack(null)
+    }
+    if (editingAlbum?.id === album.id) {
+      setShowEditAlbum(false)
+      setEditingAlbum(null)
+    }
+  }
+
   const handleSubmitEdit = async (data: any) => {
     if (editingAlbum) {
       // If coverFilePath is provided, organize it first
       if (data.coverFilePath) {
-        const organizedCoverPath = await organizeFile(data.coverFilePath, project.name, editingAlbum.title)
+        const track = editingAlbum.tracks[0]
+        const organizedCoverPath = await organizeFile(
+          data.coverFilePath,
+          project.name,
+          editingAlbum.title,
+          editingAlbum.type === 'Single' ? track?.title : undefined,
+          editingAlbum.type === 'Single' ? track?.number : undefined,
+          undefined,
+          editingAlbum.type
+        )
         updateAlbum(activeProjectId!, editingAlbum.id, { ...data, coverPath: organizedCoverPath })
       } else {
         updateAlbum(activeProjectId!, editingAlbum.id, data)
@@ -199,10 +245,6 @@ export default function ProjectOverview({ project }: { project: Project }) {
 
   const projectPaths = generateProjectPaths(project.name)
 
-  const handleOpenAlbum = (album: import('@/types').Album) => {
-    setSelectedAlbumId(album.id)
-  }
-
   const handleOpenTrack = (track: import('@/types').Track, album: import('@/types').Album) => {
     setSelectedTrack(track)
   }
@@ -215,6 +257,10 @@ export default function ProjectOverview({ project }: { project: Project }) {
   }
 
   const handleBackToAlbum = () => {
+    if (selectedAlbum?.type === 'Single') {
+      handleBackToAlbums()
+      return
+    }
     setSelectedTrack(null)
     // Emit event to sync sidebar to album folder
     if (selectedAlbumId) {
@@ -447,6 +493,7 @@ export default function ProjectOverview({ project }: { project: Project }) {
                 project={project}
                 onOpenAlbum={handleOpenAlbum}
                 onEditAlbum={handleEditAlbum}
+                onDeleteAlbum={handleDeleteAlbum}
               />
             )}
           </AnimatePresence>
@@ -470,7 +517,11 @@ export default function ProjectOverview({ project }: { project: Project }) {
             open={showNewAlbum}
             onClose={() => setShowNewAlbum(false)}
             onSubmit={async (data) => {
-              await addAlbumWithFolders(data)
+              const album = await addAlbumWithFolders(data)
+              if (album?.type === 'Single' && album.tracks[0]) {
+                setSelectedAlbumId(album.id)
+                setSelectedTrack(album.tracks[0])
+              }
               setShowNewAlbum(false)
             }}
           />
@@ -545,6 +596,7 @@ function AlbumDetailContent({ albumId, project, onOpenTrack, trackViewMode, sele
       const bName = b.split(/[\\/]/).pop() ?? ''
       return aName.localeCompare(bName, undefined, { numeric: true })
     })
+    let firstAddedTrack: import('@/types').Track | null = null
     for (const filePath of sorted) {
       const fileName = filePath.split(/[\\/]/).pop()
       if (!fileName) {
@@ -552,15 +604,17 @@ function AlbumDetailContent({ albumId, project, onOpenTrack, trackViewMode, sele
       }
       const nameWithoutExt = fileName.replace(/\.[^.]+$/, '')
       const { number, title } = parseTrackName(nameWithoutExt)
-      const finalPath = await organizeFile(filePath, project.name, album.title, title, number)
-      addTrack(project.id, album.id, {
+      const finalPath = await organizeFile(filePath, project.name, album.title, title, number, undefined, album.type)
+      const addedTrack = addTrack(project.id, album.id, {
         title,
         number,
         audioVersions: [{ id: generateId(), label: 'Pré-Mix', type: 'mix', path: finalPath, createdAt: Date.now() }],
         status
       })
+      if (!firstAddedTrack) firstAddedTrack = addedTrack
     }
     setPendingDropPaths(null)
+    if (firstAddedTrack) onOpenTrack(firstAddedTrack)
   }
 
   const handleSaveTrack = async (form: any) => {
@@ -573,8 +627,15 @@ function AlbumDetailContent({ albumId, project, onOpenTrack, trackViewMode, sele
     const existingAudioPath = editingTrack?.audioVersions?.[0]?.path
     
     if (form.audioPath && form.audioPath !== existingAudioPath) {
-      const trackPaths = generateAlbumPaths(project.name, album.title, form.title, form.number, album.type)
-      const organizedPath = await organizeFile(form.audioPath, project.name, album.title, form.title, form.number)
+      const organizedPath = await organizeFile(
+        form.audioPath,
+        project.name,
+        album.title,
+        form.title,
+        form.number,
+        undefined,
+        album.type
+      )
       // Create AudioVersion object from the organized path
       audioVersions = [{
         id: generateId(),
@@ -592,7 +653,8 @@ function AlbumDetailContent({ albumId, project, onOpenTrack, trackViewMode, sele
     if (editingTrack) {
       updateTrack(project.id, album.id, editingTrack.id, { ...formWithoutAudioPath, audioVersions })
     } else {
-      addTrack(project.id, album.id, { ...formWithoutAudioPath, audioVersions })
+      const newTrack = addTrack(project.id, album.id, { ...formWithoutAudioPath, audioVersions })
+      onOpenTrack(newTrack)
     }
     setShowTrackModal(false)
     setEditingTrack(null)
@@ -657,7 +719,7 @@ function AlbumDetailContent({ albumId, project, onOpenTrack, trackViewMode, sele
             paths={paths}
             onAddFile={async (filePath) => {
               const dest = paths.albumSubfolders.artwork
-              const finalPath = await organizeFile(filePath, project.name, album.title)
+              const finalPath = await organizeFile(filePath, project.name, album.title, undefined, undefined, undefined, album.type)
               addAlbumFile(project.id, album.id, finalPath)
             }}
             viewMode={trackViewMode}
@@ -700,12 +762,13 @@ function AlbumDetailContent({ albumId, project, onOpenTrack, trackViewMode, sele
 }
 
 // ── Album Grid/List Component ──────────────────────────────────────────────────
-function AlbumGrid({ albums, viewMode, project, onOpenAlbum, onEditAlbum }: {
+function AlbumGrid({ albums, viewMode, project, onOpenAlbum, onEditAlbum, onDeleteAlbum }: {
   albums: import('@/types').Album[]
   viewMode: 'grid' | 'list'
   project: Project
   onOpenAlbum: (album: import('@/types').Album) => void
   onEditAlbum: (e: React.MouseEvent, album: import('@/types').Album) => void
+  onDeleteAlbum: (album: import('@/types').Album) => void
 }) {
   if (albums.length === 0) {
     return (
@@ -824,7 +887,7 @@ function AlbumGrid({ albums, viewMode, project, onOpenAlbum, onEditAlbum }: {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.05 }}
           >
-            <AlbumCard album={album} project={project} projectColor={project.accent} onClick={() => onOpenAlbum(album)} onEdit={onEditAlbum} />
+            <AlbumCard album={album} project={project} projectColor={project.accent} onClick={() => onOpenAlbum(album)} onEdit={onEditAlbum} onDelete={onDeleteAlbum} />
           </motion.div>
         ))}
       </div>
@@ -840,7 +903,7 @@ function AlbumGrid({ albums, viewMode, project, onOpenAlbum, onEditAlbum }: {
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: index * 0.03 }}
         >
-          <AlbumListItem album={album} projectColor={project.accent} onClick={() => onOpenAlbum(album)} />
+          <AlbumListItem album={album} projectColor={project.accent} onClick={() => onOpenAlbum(album)} onDelete={onDeleteAlbum} />
         </motion.div>
       ))}
     </div>
@@ -848,10 +911,11 @@ function AlbumGrid({ albums, viewMode, project, onOpenAlbum, onEditAlbum }: {
 }
 
 // ── Album List Item ────────────────────────────────────────────────────────────
-function AlbumListItem({ album, projectColor, onClick }: {
+function AlbumListItem({ album, projectColor, onClick, onDelete }: {
   album: import('@/types').Album
   projectColor: string
   onClick: () => void
+  onDelete: (album: import('@/types').Album) => void
 }) {
   const { getLocalUrl } = useFileOperations()
   const addAlbumToQueue = useAddAlbumToQueue()
@@ -878,6 +942,12 @@ function AlbumListItem({ album, projectColor, onClick }: {
         label: 'Adicionar álbum à playlist',
         icon: <ListMusic className="w-4 h-4" />,
         onClick: () => addAlbumToQueue(album, activeProject, { playImmediately: true }),
+      },
+      {
+        label: 'Deletar álbum',
+        icon: <Trash2 className="w-4 h-4" />,
+        onClick: () => onDelete(album),
+        danger: true,
       },
     ]
 

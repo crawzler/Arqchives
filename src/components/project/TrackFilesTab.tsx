@@ -2,13 +2,17 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { FolderOpen, FileText, Image as ImageIcon, Video, Music2, Code, Trash2, Edit2, ExternalLink, Plus, ChevronDown } from 'lucide-react'
+import { FolderOpen, FileText, Image as ImageIcon, Video, Music2, Code, Trash2, Edit2, ExternalLink, Plus, ChevronDown, Archive } from 'lucide-react'
 import { useAppStore } from '@/store/useAppStore'
 import { useFileOperations } from '@/hooks/useElectron'
 import { cn, formatFileSize, getFileIcon } from '@/lib/utils'
 import { Button } from '@/components/ui/Button'
 import { ContextMenu, useContextMenu, createFileContextMenuItems } from '@/components/ui/ContextMenu'
 import { getFolderIconConfig, getFolderColorVar } from '@/lib/folderIcons'
+import { FileDestinationPicker, resolveFileDestination } from './FileDestinationPicker'
+import type { FileDestinationOption } from './FileDestinationPicker'
+import { StemsImportModal } from './StemsImportModal'
+import type { StemArchiveFile, StemImportSelection } from './StemsImportModal'
 
 interface TrackFilesTabProps {
   track: import('@/types').Track
@@ -29,12 +33,19 @@ interface FileItem {
 
 export function TrackFilesTab({ track, album, project, paths, viewMode = 'grid' }: TrackFilesTabProps) {
   const { listFiles, openFile, deleteFile, renameFile, ensureFolder, moveOrCopyFile } = useFileOperations()
-  const { removeTrackFile, addTrackFile } = useAppStore()
+  const { removeTrackFile, addTrackFile, projectConfig } = useAppStore()
   const [folders, setFolders] = useState<Record<string, Array<{ name: string; path: string; ext: string; size: number; isDirectory: boolean }>>>({})
   const [loading, setLoading] = useState(true)
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set())
   const [renaming, setRenaming] = useState<string | null>(null)
   const [renameValue, setRenameValue] = useState('')
+  const [pendingDestination, setPendingDestination] = useState<{
+    filePath: string
+    remainingPaths: string[]
+    choices: FileDestinationOption[]
+    reason: 'no-match' | 'multiple'
+  } | null>(null)
+  const [stemArchiveFiles, setStemArchiveFiles] = useState<StemArchiveFile[] | null>(null)
 
   // Context menu
   const { menuX, menuY, menuItems, openMenu, closeMenu } = useContextMenu()
@@ -80,21 +91,158 @@ export function TrackFilesTab({ track, album, project, paths, viewMode = 'grid' 
     return groups
   }, [allFiles])
 
-  const handleAddFiles = async (folderName: string) => {
-    const folderPath = allFolders[folderName]
-    if (!folderPath) return
+  const destinations: FileDestinationOption[] = [
+    ...Object.entries(paths.albumSubfolders).map(([folderName, folderPath]) => ({
+      id: `album:${folderName}`,
+      label: `Álbum · ${folderName}`,
+      path: folderPath,
+      tagIds: projectConfig.folderTagConfig.albumFolders[folderName] || [],
+    })),
+    ...Object.entries(paths.trackSubfolders || {}).map(([folderName, folderPath]) => ({
+      id: `track:${folderName}`,
+      label: `Faixa · ${folderName}`,
+      path: folderPath,
+      tagIds: folderName.includes('/')
+        ? projectConfig.folderTagConfig.trackSubfolders?.[folderName] || []
+        : projectConfig.folderTagConfig.trackFolders[folderName] || [],
+    })),
+  ]
+  const stemDestinations = destinations.filter(destination => destination.id.startsWith('track:Stems/'))
+
+  const copyFileToFolder = async (filePath: string, destination: FileDestinationOption) => {
+    const folderResult = await ensureFolder(destination.path)
+    if (!folderResult.ok) {
+      window.alert(`Não foi possível preparar a pasta "${destination.label}": ${folderResult.error || 'erro desconhecido'}`)
+      return
+    }
+    const result = await moveOrCopyFile({ srcPath: filePath, destFolder: destination.path, mode: 'copy' })
+    if (!result.ok || !('newPath' in result) || !result.newPath) {
+      window.alert(`Não foi possível copiar "${filePath.split(/[\\/]/).pop()}": ${result.error || 'erro desconhecido'}`)
+      return
+    }
+    addTrackFile(project.id, album.id, track.id, result.newPath)
+  }
+
+  const importFiles = async (filePaths: string[]) => {
+    for (let index = 0; index < filePaths.length; index += 1) {
+      const filePath = filePaths[index]
+      const decision = resolveFileDestination(filePath, destinations, projectConfig.tags)
+      if ('destination' in decision) {
+        await copyFileToFolder(filePath, decision.destination)
+        continue
+      }
+      if (decision.choices.length === 0) {
+        window.alert('Esta faixa não possui pastas configuradas para receber arquivos.')
+        continue
+      }
+      setPendingDestination({
+        filePath,
+        remainingPaths: filePaths.slice(index + 1),
+        choices: decision.choices,
+        reason: decision.reason,
+      })
+      return
+    }
+    await loadAllFiles()
+  }
+
+  const handleAddFiles = async () => {
     const result = await window.electronAPI?.selectFiles({
-      title: `Adicionar arquivos à pasta ${folderName}`,
-      filters: [{ name: 'Todos', extensions: ['*'] }],
+      title: 'Adicionar arquivos à faixa',
+      filters: [{ name: 'Todos os arquivos', extensions: ['*'] }],
       multiple: true,
     })
     if (result?.length) {
-      await ensureFolder(folderPath)
-      for (const filePath of result) {
-        await moveOrCopyFile({ srcPath: filePath, destFolder: folderPath, mode: 'copy' })
-        addTrackFile(project.id, album.id, track.id, filePath)
+      await importFiles(result)
+    }
+  }
+
+  const handleChooseDestination = async (destination: FileDestinationOption) => {
+    if (!pendingDestination) return
+    const { filePath, remainingPaths } = pendingDestination
+    setPendingDestination(null)
+    await copyFileToFolder(filePath, destination)
+    await importFiles(remainingPaths)
+  }
+
+  const handleSelectStemArchives = async () => {
+    const zipPaths = await window.electronAPI?.selectFiles({
+      title: 'Selecionar ZIPs de stems',
+      filters: [{ name: 'Arquivos ZIP', extensions: ['zip'] }],
+      multiple: true,
+    })
+    if (!zipPaths?.length) return
+
+    const inspectedFiles: StemArchiveFile[] = []
+    for (const zipPath of zipPaths) {
+      let result: Awaited<ReturnType<ElectronAPI['inspectStemArchive']>>
+      try {
+        result = await window.electronAPI.inspectStemArchive(zipPath)
+      } catch (error) {
+        window.alert(`Erro ao ler "${zipPath.split(/[\\/]/).pop()}": ${String(error)}`)
+        return
       }
-      loadAllFiles()
+      if (!result.ok) {
+        window.alert(`Não foi possível ler "${zipPath.split(/[\\/]/).pop()}": ${result.error || 'erro desconhecido'}`)
+        return
+      }
+      const zipName = zipPath.split(/[\\/]/).pop() || zipPath
+      inspectedFiles.push(...(result.entries || []).map(entry => ({ ...entry, zipPath, zipName })))
+    }
+
+    if (inspectedFiles.length === 0) {
+      window.alert('Os ZIPs selecionados não contêm arquivos de áudio compatíveis.')
+      return
+    }
+    if (stemDestinations.length === 0) {
+      window.alert('Esta faixa não possui pastas configuradas. Configure a pasta Stems e suas categorias antes de importar.')
+      return
+    }
+    setStemArchiveFiles(inspectedFiles)
+  }
+
+  const handleImportStems = async (selections: StemImportSelection[]) => {
+    const errors: string[] = []
+    const groupedSelections = new Map<string, StemImportSelection[]>()
+    for (const selection of selections) {
+      const group = groupedSelections.get(selection.zipPath) || []
+      group.push(selection)
+      groupedSelections.set(selection.zipPath, group)
+    }
+
+    for (const [zipPath, zipSelections] of groupedSelections) {
+      const importSelections = zipSelections.map(selection => {
+        const destination = destinations.find(option => option.id === selection.destinationId)
+        return destination ? { entryName: selection.entryName, destFolder: destination.path } : null
+      })
+      if (importSelections.some(selection => selection === null)) {
+        errors.push(`${zipPath.split(/[\\/]/).pop()}: uma pasta de destino selecionada não existe mais`)
+        continue
+      }
+
+      let result: Awaited<ReturnType<ElectronAPI['importStemArchiveEntries']>>
+      try {
+        result = await window.electronAPI.importStemArchiveEntries(
+          zipPath,
+          importSelections.filter((selection): selection is { entryName: string; destFolder: string } => selection !== null)
+        )
+      } catch (error) {
+        errors.push(`${zipPath.split(/[\\/]/).pop()}: ${String(error)}`)
+        continue
+      }
+      for (const imported of result.imported) {
+        addTrackFile(project.id, album.id, track.id, imported.newPath)
+      }
+      for (const item of result.errors || []) {
+        errors.push(`${item.entryName}: ${item.error}`)
+      }
+      if (!result.ok && result.error) errors.push(result.error)
+    }
+
+    setStemArchiveFiles(null)
+    await loadAllFiles()
+    if (errors.length > 0) {
+      window.alert(`Alguns stems não foram importados:\n${errors.join('\n')}`)
     }
   }
 
@@ -108,9 +256,9 @@ export function TrackFilesTab({ track, album, project, paths, viewMode = 'grid' 
   const handleRenameFile = async (filePath: string) => {
     if (!renameValue.trim()) return
     const result = await renameFile(filePath, renameValue)
-    if (result.ok) {
+    if (result.ok && 'newPath' in result && result.newPath) {
       removeTrackFile(project.id, album.id, track.id, filePath)
-      addTrackFile(project.id, album.id, track.id, result.newPath!)
+      addTrackFile(project.id, album.id, track.id, result.newPath)
       loadAllFiles()
     }
     setRenaming(null)
@@ -153,10 +301,16 @@ export function TrackFilesTab({ track, album, project, paths, viewMode = 'grid' 
         {/* Header */}
         <div className="flex items-center justify-between">
           <h3 className="text-body-sm font-medium text-secondary">Arquivos da Faixa</h3>
-          <Button variant="outline" size="sm" onClick={() => handleAddFiles('audio')}>
-            <Plus className="w-3.5 h-3.5 mr-xs" />
-            <span>Adicionar</span>
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={handleSelectStemArchives}>
+              <Archive className="w-3.5 h-3.5 mr-xs" />
+              <span>Importar stems ZIP</span>
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleAddFiles}>
+              <Plus className="w-3.5 h-3.5 mr-xs" />
+              <span>Adicionar</span>
+            </Button>
+          </div>
         </div>
 
         {/* File count */}
@@ -206,7 +360,7 @@ export function TrackFilesTab({ track, album, project, paths, viewMode = 'grid' 
                           {files.length === 0 ? (
                             <div className="p-lg text-center text-muted text-sm">
                               Pasta vazia
-                              <Button variant="ghost" size="sm" className="mt-sm" onClick={() => handleAddFiles(folderName)}>
+                              <Button variant="ghost" size="sm" className="mt-sm" onClick={handleAddFiles}>
                                 <Plus className="w-3.5 h-3.5 mr-xs" /> Adicionar
                               </Button>
                             </div>
@@ -306,7 +460,7 @@ export function TrackFilesTab({ track, album, project, paths, viewMode = 'grid' 
                                 <div className="grid grid-cols-[40px_1fr_80px_40px] gap-sm px-md py-md items-center text-center text-muted border-t border-subtle">
                                   <div className="col-span-4">
                                     Pasta vazia
-                                    <Button variant="ghost" size="sm" className="ml-sm" onClick={(e) => { e.stopPropagation(); handleAddFiles(folderName) }}>
+                                    <Button variant="ghost" size="sm" className="ml-sm" onClick={(e) => { e.stopPropagation(); handleAddFiles() }}>
                                       <Plus className="w-3.5 h-3.5 mr-xs" /> Adicionar
                                     </Button>
                                   </div>
@@ -331,6 +485,25 @@ export function TrackFilesTab({ track, album, project, paths, viewMode = 'grid' 
           x={menuX}
           y={menuY}
           onClose={closeMenu}
+        />
+      )}
+      <AnimatePresence>
+        {pendingDestination && (
+          <FileDestinationPicker
+            fileName={pendingDestination.filePath.split(/[\\/]/).pop() || pendingDestination.filePath}
+            choices={pendingDestination.choices}
+            reason={pendingDestination.reason}
+            onChoose={handleChooseDestination}
+            onClose={() => setPendingDestination(null)}
+          />
+        )}
+      </AnimatePresence>
+      {stemArchiveFiles && (
+        <StemsImportModal
+          files={stemArchiveFiles}
+          destinations={stemDestinations}
+          onImport={handleImportStems}
+          onClose={() => setStemArchiveFiles(null)}
         />
       )}
     </>

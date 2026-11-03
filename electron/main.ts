@@ -229,6 +229,79 @@ ipcMain.handle('list-files-recursive', async (_e, folderPath: string) => {
   } catch { return [] }
 })
 
+ipcMain.handle('inspect-stem-archive', async (_e, zipPath: string) => {
+  try {
+    if (!fs.existsSync(zipPath)) return { ok: false, error: 'Arquivo ZIP não encontrado' }
+    const AdmZip = (await import('adm-zip')).default
+    const zip = new AdmZip(zipPath)
+    const audioExtensions = new Set(['.wav', '.flac', '.aiff', '.aif', '.mp3', '.ogg', '.m4a', '.aac'])
+    const entries = zip.getEntries()
+      .filter(entry => !entry.isDirectory && audioExtensions.has(path.extname(entry.entryName).toLowerCase()))
+      .map(entry => ({
+        entryName: entry.entryName,
+        name: path.posix.basename(entry.entryName.replace(/\\/g, '/')),
+        size: entry.header.size,
+      }))
+    return { ok: true, entries }
+  } catch (error) {
+    return { ok: false, error: `Não foi possível ler o ZIP: ${String(error)}` }
+  }
+})
+
+ipcMain.handle('import-stem-archive-entries', async (
+  _e,
+  zipPath: string,
+  selections: Array<{ entryName: string; destFolder: string }>
+) => {
+  try {
+    if (!fs.existsSync(zipPath)) return { ok: false, error: 'Arquivo ZIP não encontrado', imported: [] }
+    const AdmZip = (await import('adm-zip')).default
+    const zip = new AdmZip(zipPath)
+    const entries = zip.getEntries()
+    const imported: Array<{ entryName: string; newPath: string }> = []
+    const errors: Array<{ entryName: string; error: string }> = []
+
+    for (const selection of selections) {
+      try {
+        const entry = entries.find(candidate => candidate.entryName === selection.entryName && !candidate.isDirectory)
+        if (!entry) {
+          errors.push({ entryName: selection.entryName, error: 'Arquivo não encontrado dentro do ZIP' })
+          continue
+        }
+        const extension = path.extname(entry.entryName).toLowerCase()
+        if (!['.wav', '.flac', '.aiff', '.aif', '.mp3', '.ogg', '.m4a', '.aac'].includes(extension)) {
+          errors.push({ entryName: selection.entryName, error: 'Formato de áudio não suportado para stems' })
+          continue
+        }
+
+        const entryName = path.posix.basename(entry.entryName.replace(/\\/g, '/'))
+        if (!entryName || entryName === '.' || entryName === '..') {
+          errors.push({ entryName: selection.entryName, error: 'Nome de arquivo inválido' })
+          continue
+        }
+
+        fs.mkdirSync(selection.destFolder, { recursive: true })
+        const parsedName = path.parse(entryName)
+        let outputPath = path.join(selection.destFolder, entryName)
+        let suffix = 2
+        while (fs.existsSync(outputPath)) {
+          outputPath = path.join(selection.destFolder, `${parsedName.name} (${suffix})${parsedName.ext}`)
+          suffix += 1
+        }
+
+        fs.writeFileSync(outputPath, entry.getData(), { flag: 'wx' })
+        imported.push({ entryName: selection.entryName, newPath: outputPath })
+      } catch (error) {
+        errors.push({ entryName: selection.entryName, error: String(error) })
+      }
+    }
+
+    return { ok: errors.length === 0, imported, errors }
+  } catch (error) {
+    return { ok: false, error: `Não foi possível importar os stems: ${String(error)}`, imported: [] }
+  }
+})
+
 ipcMain.handle('file-exists', async (_e, filePath: string) => {
   try { return fs.existsSync(filePath) } catch { return false }
 })
