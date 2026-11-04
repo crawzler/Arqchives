@@ -4,6 +4,7 @@ import { shallow } from 'zustand/shallow'
 import type { AppState, Project, ProjectConfig, Album, Track, TodoItem, AudioVersion, Tag, FolderTagConfig } from '@/types'
 import { DEFAULT_PROJECT_CONFIG, DEFAULT_TAGS, DEFAULT_FOLDER_TAG_CONFIG } from '@/types'
 import { generateId, sanitizeFileName } from '@/lib/utils'
+import { getPreferredAudioVersion } from '@/lib/playlist'
 
 // ── Playlist Types ───────────────────────────────────────────────────────────────
 interface PlaylistTrack {
@@ -612,13 +613,12 @@ export const useAppStore = create<AppState>()(
           const numB = parseInt(b.number, 10) || 0
           return numA - numB
         })
-        const playlistTracks: PlaylistTrack[] = sortedTracks.map((track, index) => ({
-          track,
-          album,
-          project,
-          // Use the first audio version (usually 'master' or 'mix') if available
-          audioVersion: track.audioVersions?.find(v => v.type === 'master' || v.type === 'mix') || track.audioVersions?.[0],
-        }))
+        const playlistTracks: PlaylistTrack[] = sortedTracks.flatMap((track) => {
+          const audioVersion = getPreferredAudioVersion(track)
+          return audioVersion ? [{ track, album, project, audioVersion }] : []
+        })
+        if (playlistTracks.length === 0) return
+
         // Get current queue length BEFORE adding to determine new track index
         const currentQueueLength = get().queue.length
         // Use the existing addTracksToQueue action
@@ -629,8 +629,7 @@ export const useAppStore = create<AppState>()(
         const newTrackIndex = replace ? 0 : currentQueueLength
         const firstTrack = playlistTracks[0]
         if (firstTrack) {
-          // Use audioVersion.path if available, otherwise track's first audioVersion
-          const audioPath = firstTrack.audioVersion?.path || firstTrack.track.audioVersions?.[0]?.path
+          const audioPath = firstTrack.audioVersion?.path
           if (audioPath) {
             window.dispatchEvent(new CustomEvent('arqchives:playlist-play', {
               detail: { audioPath, index: newTrackIndex, item: firstTrack }
@@ -638,6 +637,15 @@ export const useAppStore = create<AppState>()(
           }
         }
       },
+      setQueuedTrackAudioVersion: (index, audioVersion, audioPath) =>
+        set((state) => {
+          if (!state.queue[index]) return state
+          return {
+            queue: state.queue.map((item, itemIndex) =>
+              itemIndex === index ? { ...item, audioVersion, audioPath } : item
+            ),
+          }
+        }),
       removeFromQueue: (index: number) =>
         set((state) => {
           const newQueue = state.queue.filter((_, i) => i !== index)
@@ -775,6 +783,7 @@ export const usePlaylistCollapsed = () => useAppStore((state) => state.playlistC
 // Individual action selectors (stable references)
 export const useAddTracksToQueue = () => useAppStore((state) => state.addTracksToQueue)
 export const useAddAlbumToQueue = () => useAppStore((state) => state.addAlbumToQueue)
+export const useSetQueuedTrackAudioVersion = () => useAppStore((state) => state.setQueuedTrackAudioVersion)
 export const useRemoveFromQueue = () => useAppStore((state) => state.removeFromQueue)
 export const useClearQueue = () => useAppStore((state) => state.clearQueue)
 export const useSetCurrentIndex = () => useAppStore((state) => state.setCurrentIndex)

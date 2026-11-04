@@ -356,6 +356,7 @@ export interface AppState {
   setPlaylistOpen: (open: boolean) => void
   addTracksToQueue: (tracks: PlaylistTrack[], options?: { replace?: boolean; playImmediately?: boolean }) => void
   addAlbumToQueue: (album: Album, project: Project, options?: { replace?: boolean; playImmediately?: boolean }) => void
+  setQueuedTrackAudioVersion: (index: number, audioVersion: AudioVersion, audioPath: string) => void
 
   // UI Layout State
   sidebarWidth: number

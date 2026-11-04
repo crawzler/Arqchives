@@ -8,6 +8,7 @@ import { PlaylistPanel } from '@/components/player/PlaylistPanel'
 import { useFileOperations, usePathGenerator, useAlbumOperations } from '@/hooks/useAlbumOperations'
 import { Button } from '@/components/ui/Button'
 import { cn, generateId } from '@/lib/utils'
+import { getPreferredAudioVersion } from '@/lib/playlist'
 import AlbumCard from './AlbumCard'
 import { TrackCard } from './TrackCard'
 
@@ -32,6 +33,7 @@ export default function ProjectOverview({ project }: { project: Project }) {
   const { revealFile, getLocalUrl } = useFileOperations()
   const { generateProjectPaths, generateAlbumPaths } = usePathGenerator()
   const setPlaylistOpen = useSetPlaylistOpen()
+  const addTracksToQueue = useAddTracksToQueue()
   const isPlaylistOpen = usePlaylistIsOpen()
 
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
@@ -49,7 +51,7 @@ export default function ProjectOverview({ project }: { project: Project }) {
   const hasProjectAudio = useAppStore((state) => {
     const projectAlbums = state.albums[activeProjectId!] || []
     return projectAlbums.some((album: any) => 
-      album.tracks?.some((t: any) => t.audioVersions?.length > 0)
+      album.tracks?.some((track) => getPreferredAudioVersion(track))
     )
   })
 
@@ -59,16 +61,17 @@ export default function ProjectOverview({ project }: { project: Project }) {
     const projectAlbums = albums[activeProjectId!] || []
     const playlistTracks = []
     for (const album of projectAlbums) {
-      const tracksWithAudio = album.tracks?.filter((t: any) => t.audioVersions?.length > 0) || []
+      const tracksWithAudio = album.tracks?.filter((track) => getPreferredAudioVersion(track)) || []
       for (const track of tracksWithAudio) {
-        if (track.audioVersions?.[0]?.path) {
-          const audioPath = await getLocalUrl(track.audioVersions[0].path)
+        const audioVersion = getPreferredAudioVersion(track)
+        if (audioVersion?.path) {
+          const audioPath = await getLocalUrl(audioVersion.path)
           if (audioPath) {
             playlistTracks.push({
               track,
               album,
               project,
-              audioVersion: track.audioVersions[0],
+              audioVersion,
               audioPath,
             })
           }
@@ -703,6 +706,7 @@ function AlbumDetailContent({ albumId, project, onOpenTrack, trackViewMode, sele
             projectColor={project.accent}
             onOpenTrack={onOpenTrack}
             onEdit={setEditingTrack}
+            onEditTrack={(track) => { setEditingTrack(track); setShowTrackModal(true) }}
             onDelete={setConfirmDelete}
             onDropFiles={handleDropFiles}
             onAddManual={() => { setEditingTrack(null); setShowTrackModal(true) }}
@@ -880,7 +884,7 @@ function AlbumGrid({ albums, viewMode, project, onOpenAlbum, onEditAlbum, onDele
 
   if (viewMode === 'grid') {
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,320px),1fr))] gap-4">
         {albums.map((album, index) => (
           <motion.div
             key={album.id}
@@ -1012,11 +1016,12 @@ function AlbumListItem({ album, projectColor, onClick, onDelete }: {
 }
 
 // ── Tracklist Component ────────────────────────────────────────────────────────
-function Tracklist({ tracks, projectColor, onOpenTrack, onEdit, onDelete, onDropFiles, onAddManual, album, project, paths, trackViewMode }: {
+function Tracklist({ tracks, projectColor, onOpenTrack, onEdit, onEditTrack, onDelete, onDropFiles, onAddManual, album, project, paths, trackViewMode }: {
   tracks: import('@/types').Track[]
   projectColor: string
   onOpenTrack: (track: import('@/types').Track) => void
   onEdit: (track: import('@/types').Track) => void
+  onEditTrack: (track: import('@/types').Track) => void
   onDelete: (track: import('@/types').Track) => void
   onDropFiles: (paths: string[]) => void
   onAddManual: () => void
@@ -1033,15 +1038,16 @@ function Tracklist({ tracks, projectColor, onOpenTrack, onEdit, onDelete, onDrop
   const setPlaylistOpen = useSetPlaylistOpen()
 
   const handleAddTrackToPlaylist = async (track: import('@/types').Track) => {
-    if (track.audioVersions?.[0]?.path) {
-      const audioPath = await getLocalUrl(track.audioVersions[0].path)
+    const audioVersion = getPreferredAudioVersion(track)
+    if (audioVersion?.path) {
+      const audioPath = await getLocalUrl(audioVersion.path)
       const currentQueueLength = useAppStore.getState().queue.length
       
       const playlistItem = {
         track,
         album,
         project,
-        audioVersion: track.audioVersions[0],
+        audioVersion,
         audioPath,
       }
       
@@ -1067,13 +1073,13 @@ function Tracklist({ tracks, projectColor, onOpenTrack, onEdit, onDelete, onDrop
     const items = createTrackContextMenuItems(
       track,
       () => onOpenTrack(track),
-      () => { onEdit(track); onAddManual(); }, // onEdit sets editingTrack, onAddManual opens modal
+      () => onEditTrack(track),
       () => {
         navigator.clipboard.writeText(trackFolderPath)
       },
-      async () => {
+      getPreferredAudioVersion(track) ? async () => {
         await handleAddTrackToPlaylist(track)
-      },
+      } : undefined,
       () => onDelete(track)
     )
     openMenu(e, items)
@@ -1132,7 +1138,7 @@ function Tracklist({ tracks, projectColor, onOpenTrack, onEdit, onDelete, onDrop
 
   const renderTrackGrid = () => (
     <>
-      <div ref={zoneRef} className={cn("grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4", dragging && "bg-white/5")}>
+      <div ref={zoneRef} className={cn("grid grid-cols-[repeat(auto-fit,minmax(min(100%,320px),1fr))] gap-4", dragging && "bg-white/5")}>
         {tracks.map((track, index) => (
           <TrackCard
             key={track.id}

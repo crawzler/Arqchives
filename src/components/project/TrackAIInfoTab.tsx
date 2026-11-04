@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Copy, Check, FileText, Sparkles, Settings, PenTool, Loader2, PanelRight } from 'lucide-react'
+import { Copy, Check, FileText, Sparkles, Settings, PenTool, PanelRight, Save } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/Button'
 
@@ -23,7 +23,6 @@ export function TrackAIInfoTab({ track, projectColor, onSave }: TrackAIInfoTabPr
   })
   const [dirty, setDirty] = useState(false)
   const [copied, setCopied] = useState<string | null>(null)
-  const [saving, setSaving] = useState(false)
   const [layout, setLayout] = useState<'lyrics' | 'details'>('lyrics')
 
   const copyToClipboard = async (text: string, label: string) => {
@@ -33,14 +32,12 @@ export function TrackAIInfoTab({ track, projectColor, onSave }: TrackAIInfoTabPr
     setTimeout(() => setCopied(null), 2000)
   }
 
-  const handleSave = async () => {
-    setSaving(true)
+  const handleSave = () => {
     onSave({ ...form })
     setDirty(false)
-    setTimeout(() => setSaving(false), 500)
   }
 
-  const hasContent = Object.values(form).some(v => v.trim())
+  const accentStyle = { '--accent': projectColor } as React.CSSProperties
 
   const detailFields = [
     {
@@ -85,11 +82,55 @@ export function TrackAIInfoTab({ track, projectColor, onSave }: TrackAIInfoTabPr
     },
   ]
 
-  const renderLyricsField = (fullWidth = false) => (
+  const renderDetailField = (field: typeof detailFields[number], idx: number, fillHeight = false) => (
+    <motion.div
+      key={field.key}
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: idx * 0.03 }}
+      className={cn("space-y-2 min-h-0", fillHeight && "h-full flex flex-col")}
+    >
+      <div className="flex items-center justify-between">
+        <label className="flex items-center gap-2 text-sm font-medium text-neutral-300">
+          <span className="text-neutral-500">{field.icon}</span>
+          {field.label}
+        </label>
+        {field.copyable && form[field.key] && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => copyToClipboard(form[field.key], field.key)}
+            className={cn(copied === field.key && "text-emerald-400")}
+          >
+            {copied === field.key ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+          </Button>
+        )}
+      </div>
+      <textarea
+        value={form[field.key]}
+        onChange={e => {
+          setForm(f => ({ ...f, [field.key]: e.target.value }))
+          setDirty(true)
+        }}
+        placeholder={field.placeholder}
+        rows={field.rows}
+        className={cn(
+          "w-full bg-neutral-900 border border-neutral-700 rounded-xl px-4 py-3 text-sm text-white placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-white/30 resize-y transition-colors font-mono text-xs leading-relaxed",
+          fillHeight && "flex-1 min-h-[280px]"
+        )}
+        style={{
+          fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace',
+          borderColor: dirty && form[field.key] ? projectColor + '40' : 'transparent',
+        }}
+      />
+    </motion.div>
+  )
+
+  const renderLyricsField = () => (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="space-y-2 h-full flex flex-col"
+      className="space-y-2 h-full min-h-0 flex flex-col"
     >
       <div className="flex items-center justify-between">
         <label className="flex items-center gap-2 text-sm font-medium text-neutral-300">
@@ -129,10 +170,9 @@ export function TrackAIInfoTab({ track, projectColor, onSave }: TrackAIInfoTabPr
         placeholder="Cole a letra completa aqui..."
         rows={12}
         className="flex-1 w-full bg-neutral-900 border border-neutral-700 rounded-xl px-4 py-3 text-sm text-white placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-white/30 resize-none transition-colors font-mono text-xs leading-relaxed"
-        style={{ 
+        style={{
           fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace',
           borderColor: dirty && form.lyrics ? projectColor + '40' : 'transparent',
-          minHeight: layout === 'lyrics' ? 'calc(100vh - 300px)' : '280px',
         }}
       />
     </motion.div>
@@ -149,31 +189,34 @@ export function TrackAIInfoTab({ track, projectColor, onSave }: TrackAIInfoTabPr
         <div className="flex items-center gap-2">
           {/* Layout Toggle Buttons - Only 2 modes */}
           <Button
-            variant={layout === 'lyrics' ? 'default' : 'ghost'}
+            variant={layout === 'lyrics' ? 'primary' : 'ghost'}
             size="icon"
             onClick={() => setLayout('lyrics')}
             className="text-neutral-400 hover:text-white"
             title="Focar apenas na letra"
-            style={{ '--accent': projectColor }}
+            style={accentStyle}
           >
             <FileText className="w-4 h-4" />
           </Button>
           <Button
-            variant={layout === 'details' ? 'default' : 'ghost'}
+            variant={layout === 'details' ? 'primary' : 'ghost'}
             size="icon"
             onClick={() => setLayout('details')}
             className="text-neutral-400 hover:text-white"
             title="Detalhes técnicos (duas colunas)"
-            style={{ '--accent': projectColor }}
+            style={accentStyle}
           >
             <PanelRight className="w-4 h-4" />
           </Button>
-          {dirty && !saving && (
-            <Button onClick={handleSave} size="sm" style={{ '--accent': projectColor }}>
-              <Loader2 className={cn("w-4 h-4", saving && "animate-spin")} />
-              <span>Salvar</span>
-            </Button>
-          )}
+          <Button
+            onClick={handleSave}
+            size="sm"
+            style={accentStyle}
+            disabled={!dirty}
+          >
+            <Save className="w-4 h-4" />
+            <span>Salvar</span>
+          </Button>
         </div>
       </div>
 
@@ -182,79 +225,42 @@ export function TrackAIInfoTab({ track, projectColor, onSave }: TrackAIInfoTabPr
       </p>
 
       {/* Content */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 min-h-0 overflow-hidden">
         {layout === 'lyrics' && (
-          <div className="h-full p-2">{renderLyricsField(true)}</div>
+          <div className="h-full min-h-0 p-2">{renderLyricsField()}</div>
         )}
 
         {layout === 'details' && (
-          <div className="h-full p-2">
-            <div className="h-full grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {detailFields.map((field, idx) => (
+          <div className="h-full min-h-0 overflow-y-auto p-2">
+            <div className="grid grid-cols-1 gap-4 lg:h-full lg:grid-cols-2">
+              {renderDetailField(detailFields[0], 0, true)}
+              <div className="space-y-4">
+                {detailFields.slice(1).map((field, idx) => renderDetailField(field, idx + 1))}
+
                 <motion.div
-                  key={field.key}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: idx * 0.03 }}
-                  className="space-y-2 min-h-0"
+                  className="flex flex-wrap gap-3 pt-4 border-t border-neutral-800"
                 >
-                  <div className="flex items-center justify-between">
-                    <label className="flex items-center gap-2 text-sm font-medium text-neutral-300">
-                      <span className="text-neutral-500">{field.icon}</span>
-                      {field.label}
-                    </label>
-                    {field.copyable && form[field.key] && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => copyToClipboard(form[field.key], field.key)}
-                        className={cn(copied === field.key && "text-emerald-400")}
-                      >
-                        {copied === field.key ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                      </Button>
-                    )}
-                  </div>
-                  <textarea
-                    value={form[field.key]}
-                    onChange={e => { 
-                      setForm(f => ({ ...f, [field.key]: e.target.value })); 
-                      setDirty(true) 
-                    }}
-                    placeholder={field.placeholder}
-                    rows={field.rows}
-                    className="w-full bg-neutral-900 border border-neutral-700 rounded-xl px-4 py-3 text-sm text-white placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-white/30 resize-y transition-colors font-mono text-xs leading-relaxed"
-                    style={{ 
-                      fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace',
-                      borderColor: dirty && form[field.key] ? projectColor + '40' : 'transparent',
-                    }}
-                  />
+                  <Button variant="outline" size="sm" onClick={() => copyToClipboard(form.prompt, 'prompt')} disabled={!form.prompt.trim()}>
+                    <Copy className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Copiar Prompt</span>
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => copyToClipboard(form.positivePrompt, 'positivePrompt')} disabled={!form.positivePrompt.trim()}>
+                    <Copy className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Copiar Positivos</span>
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => copyToClipboard(form.style, 'style')} disabled={!form.style.trim()}>
+                    <Copy className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Copiar Estilos</span>
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => copyToClipboard(form.lyrics, 'lyrics')} disabled={!form.lyrics.trim()}>
+                    <Copy className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Copiar Letra</span>
+                  </Button>
                 </motion.div>
-              ))}
+              </div>
             </div>
-
-            {/* Quick Actions */}
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="flex flex-wrap gap-3 pt-4 border-t border-neutral-800"
-            >
-              <Button variant="outline" size="sm" onClick={() => copyToClipboard(form.prompt, 'prompt')} disabled={!form.prompt.trim()}>
-                <Copy className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Copiar Prompt</span>
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => copyToClipboard(form.positivePrompt, 'positivePrompt')} disabled={!form.positivePrompt.trim()}>
-                <Copy className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Copiar Positivos</span>
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => copyToClipboard(form.style, 'style')} disabled={!form.style.trim()}>
-                <Copy className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Copiar Estilos</span>
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => copyToClipboard(form.lyrics, 'lyrics')} disabled={!form.lyrics.trim()}>
-                <Copy className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Copiar Letra</span>
-              </Button>
-            </motion.div>
           </div>
         )}
       </div>

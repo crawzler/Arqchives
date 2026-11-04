@@ -6,6 +6,7 @@ import { ChevronLeft, Plus, Music2, MoreVertical, Settings, Image as ImageIcon, 
 import { useAppStore, useActiveProjectId, useAlbum, useAddTracksToQueue, useSetPlaylistOpen } from '@/store/useAppStore'
 import { useFileOperations, useAlbumOperations } from '@/hooks/useAlbumOperations'
 import { cn, formatFileSize, generateId } from '@/lib/utils'
+import { getPreferredAudioVersion } from '@/lib/playlist'
 import { TrackRow } from '@/components/project/TrackRow'
 import { ContextMenu, useContextMenu, createTrackContextMenuItems } from '@/components/ui/ContextMenu'
 import { AlbumTabs } from '@/components/project/AlbumTabs'
@@ -49,15 +50,16 @@ export default function AlbumDetail({ albumId, project, onBack, onOpenTrack }: {
   const paths = generateAlbumPaths(project.name, album.title, undefined, undefined, album.type)
 
   const handleAddTrackToPlaylist = async (track: import('@/types').Track) => {
-    if (track.audioVersions?.[0]?.path) {
-      const audioPath = await getLocalUrl(track.audioVersions[0].path)
+    const audioVersion = getPreferredAudioVersion(track)
+    if (audioVersion?.path) {
+      const audioPath = await getLocalUrl(audioVersion.path)
       const currentQueueLength = useAppStore.getState().queue.length
       
       const playlistItem = {
         track,
         album: album!,
         project,
-        audioVersion: track.audioVersions[0],
+        audioVersion,
         audioPath,
       }
       
@@ -91,9 +93,9 @@ export default function AlbumDetail({ albumId, project, onBack, onOpenTrack }: {
       () => {
         navigator.clipboard.writeText(trackFolderPath)
       },
-      async () => {
+      getPreferredAudioVersion(track) ? async () => {
         await handleAddTrackToPlaylist(track)
-      },
+      } : undefined,
       () => {
         setConfirmDelete(track)
       }
@@ -266,19 +268,17 @@ export default function AlbumDetail({ albumId, project, onBack, onOpenTrack }: {
               size="sm"
               variant="ghost"
               onClick={async () => {
-                const tracksWithAudio = album.tracks?.filter((t: any) => t.audioVersions?.length > 0) || []
+                const tracksWithAudio = album.tracks?.filter((track) => getPreferredAudioVersion(track)) || []
                 const playlistTracks = []
                 for (const track of tracksWithAudio) {
-                  let audioPath: string | undefined
-                  if (track.audioVersions?.[0]?.path) {
-                    audioPath = await getLocalUrl(track.audioVersions[0].path)
-                  }
+                  const audioVersion = getPreferredAudioVersion(track)
+                  const audioPath = audioVersion?.path ? await getLocalUrl(audioVersion.path) : undefined
                   if (audioPath) {
                     playlistTracks.push({
                       track,
                       album: album!,
                       project,
-                      audioVersion: track.audioVersions[0],
+                      audioVersion,
                       audioPath,
                     })
                   }
@@ -287,7 +287,7 @@ export default function AlbumDetail({ albumId, project, onBack, onOpenTrack }: {
                   addTracksToQueue(playlistTracks, { playImmediately: true })
                 }
               }}
-              disabled={!album.tracks?.some((t: any) => t.audioVersions?.length > 0)}
+              disabled={!album.tracks?.some((track) => getPreferredAudioVersion(track))}
               className="text-neutral-400 hover:text-white"
             >
               <ListMusic className="w-4 h-4 mr-1.5" />
@@ -303,16 +303,17 @@ export default function AlbumDetail({ albumId, project, onBack, onOpenTrack }: {
                 const projectAlbums = albums[activeProjectId!] || []
                 const playlistTracks = []
                 for (const alb of projectAlbums) {
-                  const tracksWithAudio = alb.tracks?.filter((t: any) => t.audioVersions?.length > 0) || []
+                  const tracksWithAudio = alb.tracks?.filter((track) => getPreferredAudioVersion(track)) || []
                   for (const track of tracksWithAudio) {
-                    if (track.audioVersions?.[0]?.path) {
-                      const audioPath = await getLocalUrl(track.audioVersions[0].path)
+                    const audioVersion = getPreferredAudioVersion(track)
+                    if (audioVersion?.path) {
+                      const audioPath = await getLocalUrl(audioVersion.path)
                       if (audioPath) {
                         playlistTracks.push({
                           track,
                           album: alb,
                           project,
-                          audioVersion: track.audioVersions[0],
+                          audioVersion,
                           audioPath,
                         })
                       }
@@ -323,7 +324,7 @@ export default function AlbumDetail({ albumId, project, onBack, onOpenTrack }: {
                   addTracksToQueue(playlistTracks, { playImmediately: true })
                 }
               }}
-              disabled={!Object.values(useAppStore.getState().albums[activeProjectId!] || {}).some((a: any) => a.tracks?.some((t: any) => t.audioVersions?.length > 0))}
+              disabled={!Object.values(useAppStore.getState().albums[activeProjectId!] || {}).some((a: any) => a.tracks?.some((track) => getPreferredAudioVersion(track)))}
               className="text-neutral-400 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <ListMusic className="w-4 h-4 mr-1.5" />

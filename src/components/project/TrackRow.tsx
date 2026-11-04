@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils'
 import { TRACK_STATUSES } from '@/types'
 import { useFileOperations } from '@/hooks/useAlbumOperations'
 import { StatusBadge } from '@/components/ui/Badges'
+import { getPreferredAudioVersion } from '@/lib/playlist'
 
 interface TrackRowProps {
   track: import('@/types').Track
@@ -114,7 +115,7 @@ export function TrackRow({ track, index, projectColor, albumCover, onOpen, onEdi
       <StatusBadge status={track.status as keyof typeof TRACK_STATUSES} size="sm" />
 
       {/* Add to Playlist button - visible on hover or if has audio */}
-      {onAddToPlaylist && track.audioVersions?.length > 0 && (
+      {onAddToPlaylist && getPreferredAudioVersion(track) && (
         <button
           onClick={(e) => { e.stopPropagation(); onAddToPlaylist() }}
           className="w-6 h-6 rounded bg-white/5 hover:bg-emerald-600/20 flex items-center justify-center text-neutral-500 hover:text-emerald-400 trans-colors flex-shrink-0 ml-xs focus-ring"

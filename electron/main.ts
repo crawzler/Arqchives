@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, dialog, shell } from 'electron'
+import { app, BrowserWindow, ipcMain, dialog, shell, session } from 'electron'
 import path from 'path'
 import fs from 'fs'
 
@@ -89,6 +89,7 @@ function createWindow() {
     },
     icon: getIconPath(),
   })
+  win.maximize()
 
   if (isDev) {
     const tryLoad = async (attempt = 0) => {
@@ -137,6 +138,24 @@ function createWindow() {
 
 app.whenReady().then(() => {
   migrateFromDev()
+
+  const spellCheckerLanguages = ['pt-BR', 'en-US']
+  const defaultSession = session.defaultSession
+  const availableSpellCheckerLanguages = defaultSession.availableSpellCheckerLanguages
+  const supportedSpellCheckerLanguages = spellCheckerLanguages.filter((language) =>
+    availableSpellCheckerLanguages.includes(language)
+  )
+
+  if (supportedSpellCheckerLanguages.length > 0) {
+    defaultSession.setSpellCheckerLanguages(supportedSpellCheckerLanguages)
+  }
+  if (supportedSpellCheckerLanguages.length !== spellCheckerLanguages.length) {
+    const unavailableLanguages = spellCheckerLanguages.filter((language) =>
+      !supportedSpellCheckerLanguages.includes(language)
+    )
+    console.warn(`Spell checker dictionaries unavailable: ${unavailableLanguages.join(', ')}`)
+  }
+
   createWindow()
 
   app.on('activate', () => {

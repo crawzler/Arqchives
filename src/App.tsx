@@ -261,7 +261,7 @@ export default function App() {
       <AppToolbar />
       
       {/* Main Layout Container - flex row: Sidebar | Main | Playlist */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 min-h-0 overflow-hidden">
         {/* Sidebar - Resizable (fixed left) */}
         <ResizablePanel
           position="left"
@@ -303,13 +303,13 @@ export default function App() {
         </div>
       )}
 
-      {/* Global Audio Player - fixed at bottom of screen, OUTSIDE layout containers to prevent unmount on resize */}
+      {/* Keep the player in the app layout so it does not cover scrollable content. */}
       {showPlayer && (
-        <div className="fixed bottom-0 left-0 right-0 z-50 pointer-events-none" style={{
+        <div className="flex-shrink-0" style={{
           marginLeft: 'var(--sidebar-width, 0px)',
           marginRight: 'var(--playlist-width, 0px)',
         }}>
-          <div className="pointer-events-auto mx-auto max-w-full">
+          <div className="mx-auto max-w-full">
             <AudioPlayer
               src={audioSrc}
               onEnded={handleAudioEnded}

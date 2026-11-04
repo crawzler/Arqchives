@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils'
 import { TRACK_STATUSES } from '@/types'
 import { useFileOperations } from '@/hooks/useAlbumOperations'
 import { StatusBadge } from '@/components/ui/Badges'
+import { getPreferredAudioVersion } from '@/lib/playlist'
 
 interface TrackCardProps {
   track: import('@/types').Track
@@ -130,7 +131,7 @@ export function TrackCard({ track, index, projectColor, albumCover, onOpen, onCo
 
       {/* Actions - only visible on hover */}
       <div className="absolute top-sm right-sm flex gap-xs opacity-0 group-hover:opacity-100 transition-opacity translate-y-1 group-hover:translate-y-0">
-        {onAddToPlaylist && track.audioVersions?.length > 0 && (
+        {onAddToPlaylist && getPreferredAudioVersion(track) && (
           <button
             onClick={(e) => { e.stopPropagation(); onAddToPlaylist() }}
             className="w-8 h-8 rounded-lg bg-black/50 backdrop-blur-sm hover:bg-emerald-600/20 flex items-center justify-center text-emerald-400 hover:text-emerald-300 trans-colors border border-white/10 focus-ring"

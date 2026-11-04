@@ -191,7 +191,12 @@ export default function TrackDetail({ trackId, albumId, project, onBack, trackVi
           />
         ) : (
           // Other tabs: with padding and scroll
-          <div className="h-full min-h-0 overflow-y-auto p-4 md:p-6 max-w-6xl mx-auto">
+          <div className={cn(
+            "h-full min-h-0 max-w-6xl mx-auto",
+            activeTab === 'info'
+              ? "w-full overflow-hidden"
+              : "overflow-y-auto p-4 md:p-6"
+          )}>
             {activeTab === 'info' && (
               <TrackAIInfoTab
                 track={track}

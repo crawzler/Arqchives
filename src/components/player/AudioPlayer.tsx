@@ -3,7 +3,8 @@
 import { useRef, useState, useEffect, useCallback } from 'react'
 import { Play, Pause, Volume2, VolumeX, Repeat, Music, Shuffle } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { usePlaylistCurrentTrack, useActiveProject, usePlaylistCurrentIndex, usePlaylistRepeat, usePlaylistShuffle, useSetRepeat, useSetShuffle } from '@/store/useAppStore'
+import { getPreferredAudioVersion } from '@/lib/playlist'
+import { usePlaylistCurrentTrack, useActiveProject, usePlaylistCurrentIndex, usePlaylistRepeat, usePlaylistShuffle, useSetRepeat, useSetShuffle, useSetQueuedTrackAudioVersion } from '@/store/useAppStore'
 import { Waveform } from '@/components/player/Waveform'
 
 interface AudioPlayerProps {
@@ -25,8 +26,12 @@ export function AudioPlayer({ src, onEnded, className, onPlaylistPlay, isPlaying
   const shuffle = usePlaylistShuffle()
   const setRepeat = useSetRepeat()
   const setShuffle = useSetShuffle()
+  const setQueuedTrackAudioVersion = useSetQueuedTrackAudioVersion()
   const trackInfo = currentTrack?.track
+  const selectedAudioVersion = currentTrack?.audioVersion
+    ?? (trackInfo ? getPreferredAudioVersion(trackInfo) : undefined)
   const audioRef = useRef<HTMLAudioElement>(null)
+  const pendingVersionSeekRef = useRef<number | null>(null)
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
   const [volume, setVolume] = useState(1)
@@ -64,7 +69,8 @@ export function AudioPlayer({ src, onEnded, className, onPlaylistPlay, isPlaying
   // Listen for playlist play events (from TrackPlayer/PlaylistPanel requesting different track)
   useEffect(() => {
     const handlePlaylistPlay = (e: CustomEvent) => {
-      const { audioPath } = e.detail
+      const { audioPath, preserveTime } = e.detail
+      if (!preserveTime) pendingVersionSeekRef.current = null
       if (audioPath && audioPath !== srcRef.current) {
         onPlaylistPlay?.(audioPath)
       }
@@ -92,7 +98,6 @@ export function AudioPlayer({ src, onEnded, className, onPlaylistPlay, isPlaying
     
     audio.src = src
     audio.loop = repeat === 'one'
-    audio.load()
 
     const handleTimeUpdate = () => {
       if (!mountedRef.current) return
@@ -105,6 +110,14 @@ export function AudioPlayer({ src, onEnded, className, onPlaylistPlay, isPlaying
       if (isFinite(dur) && dur > 0) {
         setDuration(dur)
         dispatchGlobalEvent('arqchives:global-duration', { duration: dur })
+      }
+      const pendingSeek = pendingVersionSeekRef.current
+      if (pendingSeek !== null) {
+        const seekTime = isFinite(dur) && dur > 0 ? Math.min(pendingSeek, dur) : pendingSeek
+        pendingVersionSeekRef.current = null
+        audio.currentTime = seekTime
+        setCurrentTime(seekTime)
+        dispatchGlobalEvent('arqchives:global-timeupdate', { time: seekTime })
       }
     }
     const handleEnded = () => {
@@ -146,6 +159,7 @@ export function AudioPlayer({ src, onEnded, className, onPlaylistPlay, isPlaying
     audio.addEventListener('pause', handlePause)
     audio.addEventListener('waiting', handleWaiting)
     audio.addEventListener('stalled', handleStalled)
+    audio.load()
 
     return () => {
       mountedRef.current = false
@@ -245,6 +259,28 @@ export function AudioPlayer({ src, onEnded, className, onPlaylistPlay, isPlaying
     onPlayStateChange?.(!isPlaying)
   }
 
+  const handleAudioVersionChange = async (versionId: string) => {
+    const version = trackInfo?.audioVersions?.find(item => item.id === versionId)
+    if (!version || !currentTrack) return
+
+    try {
+      const audioPath = await window.electronAPI?.getLocalUrl(version.path)
+      if (!audioPath) {
+        console.error('[AudioPlayer] Unable to resolve selected audio version', { path: version.path })
+        return
+      }
+
+      const updatedTrack = { ...currentTrack, audioVersion: version, audioPath }
+      pendingVersionSeekRef.current = audioRef.current?.currentTime ?? currentTime
+      setQueuedTrackAudioVersion(currentIndex, version, audioPath)
+      window.dispatchEvent(new CustomEvent('arqchives:playlist-play', {
+        detail: { audioPath, index: currentIndex, item: updatedTrack, preserveTime: true },
+      }))
+    } catch (error) {
+      console.error('[AudioPlayer] Failed to select audio version', { version, error })
+    }
+  }
+
   const setGlobalVolumeFromPlayer = (vol: number) => {
     const clampedVol = Math.max(0, Math.min(1, vol))
     const audio = audioRef.current
@@ -289,9 +325,21 @@ export function AudioPlayer({ src, onEnded, className, onPlaylistPlay, isPlaying
                   {trackInfo.title}
                 </p>
                 {currentTrack?.album && (
-                  <p className="text-[11px] text-muted truncate flex items-center gap-xs">
-                    {currentTrack.album.title}
-                  </p>
+                  <div className="flex items-center gap-xs min-w-0">
+                    <p className="text-[11px] text-muted truncate">{currentTrack.album.title}</p>
+                    {trackInfo.audioVersions?.length > 1 && selectedAudioVersion && (
+                      <select
+                        aria-label="Versão de áudio"
+                        value={selectedAudioVersion.id}
+                        onChange={event => void handleAudioVersionChange(event.target.value)}
+                        className="max-w-32 h-6 px-1 text-[11px] text-primary bg-hover border border-subtle rounded focus-ring"
+                      >
+                        {trackInfo.audioVersions?.map(version => (
+                          <option key={version.id} value={version.id}>{version.label}</option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
                 )}
               </div>
             </div>
