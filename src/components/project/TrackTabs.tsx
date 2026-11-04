@@ -1,12 +1,12 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { Music2, FileText, MessageSquare, Info } from 'lucide-react'
+import { Music2, FileText, MessageSquare, Info, ListMusic } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface TrackTabsProps {
-  activeTab: 'player' | 'files' | 'social' | 'info'
-  onChange: (tab: 'player' | 'files' | 'social' | 'info') => void
+  activeTab: 'player' | 'files' | 'social' | 'info' | 'lyrics'
+  onChange: (tab: 'player' | 'files' | 'social' | 'info' | 'lyrics') => void
   projectColor: string
   hasAudio: boolean
 }
@@ -17,6 +17,7 @@ export function TrackTabs({ activeTab, onChange, projectColor, hasAudio }: Track
     { id: 'files' as const, label: 'Arquivos', icon: FileText },
     { id: 'social' as const, label: 'Social', icon: MessageSquare },
     { id: 'info' as const, label: 'Informações', icon: Info },
+    { id: 'lyrics' as const, label: 'Letra', icon: ListMusic },
   ]
 
   return (

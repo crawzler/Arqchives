@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Copy, Check, FileText, Sparkles, Settings, PenTool, PanelRight, Save } from 'lucide-react'
+import { Copy, Check, FileText, Sparkles, Settings, PenTool, Save } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/Button'
 
@@ -14,7 +14,6 @@ interface TrackAIInfoTabProps {
 
 export function TrackAIInfoTab({ track, projectColor, onSave }: TrackAIInfoTabProps) {
   const [form, setForm] = useState({
-    lyrics: track.lyrics || '',
     prompt: track.prompt || '',
     positivePrompt: track.positivePrompt || '',
     style: track.style || '',
@@ -23,7 +22,6 @@ export function TrackAIInfoTab({ track, projectColor, onSave }: TrackAIInfoTabPr
   })
   const [dirty, setDirty] = useState(false)
   const [copied, setCopied] = useState<string | null>(null)
-  const [layout, setLayout] = useState<'lyrics' | 'details'>('lyrics')
 
   const copyToClipboard = async (text: string, label: string) => {
     if (!text.trim()) return
@@ -126,58 +124,6 @@ export function TrackAIInfoTab({ track, projectColor, onSave }: TrackAIInfoTabPr
     </motion.div>
   )
 
-  const renderLyricsField = () => (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="space-y-2 h-full min-h-0 flex flex-col"
-    >
-      <div className="flex items-center justify-between">
-        <label className="flex items-center gap-2 text-sm font-medium text-neutral-300">
-          <span className="text-neutral-500"><FileText className="w-4 h-4" /></span>
-          Letra da Música
-        </label>
-        <div className="flex items-center gap-1">
-          {form.lyrics && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => copyToClipboard(form.lyrics, 'lyrics')}
-              className={cn(copied === 'lyrics' && "text-emerald-400")}
-            >
-              {copied === 'lyrics' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-            </Button>
-          )}
-          {layout === 'details' && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setLayout('lyrics')}
-              className="text-neutral-400 hover:text-white"
-              title="Focar na letra"
-            >
-              <FileText className="w-4 h-4" />
-            </Button>
-          )}
-        </div>
-      </div>
-      <textarea
-        value={form.lyrics}
-        onChange={e => { 
-          setForm(f => ({ ...f, lyrics: e.target.value })); 
-          setDirty(true) 
-        }}
-        placeholder="Cole a letra completa aqui..."
-        rows={12}
-        className="flex-1 w-full bg-neutral-900 border border-neutral-700 rounded-xl px-4 py-3 text-sm text-white placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-white/30 resize-none transition-colors font-mono text-xs leading-relaxed"
-        style={{
-          fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace',
-          borderColor: dirty && form.lyrics ? projectColor + '40' : 'transparent',
-        }}
-      />
-    </motion.div>
-  )
-
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
@@ -187,27 +133,6 @@ export function TrackAIInfoTab({ track, projectColor, onSave }: TrackAIInfoTabPr
           <span className="text-xs text-neutral-500 px-2 py-0.5 bg-white/5 rounded">IA</span>
         </div>
         <div className="flex items-center gap-2">
-          {/* Layout Toggle Buttons - Only 2 modes */}
-          <Button
-            variant={layout === 'lyrics' ? 'primary' : 'ghost'}
-            size="icon"
-            onClick={() => setLayout('lyrics')}
-            className="text-neutral-400 hover:text-white"
-            title="Focar apenas na letra"
-            style={accentStyle}
-          >
-            <FileText className="w-4 h-4" />
-          </Button>
-          <Button
-            variant={layout === 'details' ? 'primary' : 'ghost'}
-            size="icon"
-            onClick={() => setLayout('details')}
-            className="text-neutral-400 hover:text-white"
-            title="Detalhes técnicos (duas colunas)"
-            style={accentStyle}
-          >
-            <PanelRight className="w-4 h-4" />
-          </Button>
           <Button
             onClick={handleSave}
             size="sm"
@@ -226,43 +151,33 @@ export function TrackAIInfoTab({ track, projectColor, onSave }: TrackAIInfoTabPr
 
       {/* Content */}
       <div className="flex-1 min-h-0 overflow-hidden">
-        {layout === 'lyrics' && (
-          <div className="h-full min-h-0 p-2">{renderLyricsField()}</div>
-        )}
+        <div className="h-full min-h-0 overflow-y-auto p-2">
+          <div className="grid grid-cols-1 gap-4 lg:h-full lg:grid-cols-2">
+            {renderDetailField(detailFields[0], 0, true)}
+            <div className="space-y-4">
+              {detailFields.slice(1).map((field, idx) => renderDetailField(field, idx + 1))}
 
-        {layout === 'details' && (
-          <div className="h-full min-h-0 overflow-y-auto p-2">
-            <div className="grid grid-cols-1 gap-4 lg:h-full lg:grid-cols-2">
-              {renderDetailField(detailFields[0], 0, true)}
-              <div className="space-y-4">
-                {detailFields.slice(1).map((field, idx) => renderDetailField(field, idx + 1))}
-
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="flex flex-wrap gap-3 pt-4 border-t border-neutral-800"
-                >
-                  <Button variant="outline" size="sm" onClick={() => copyToClipboard(form.prompt, 'prompt')} disabled={!form.prompt.trim()}>
-                    <Copy className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline">Copiar Prompt</span>
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => copyToClipboard(form.positivePrompt, 'positivePrompt')} disabled={!form.positivePrompt.trim()}>
-                    <Copy className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline">Copiar Positivos</span>
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => copyToClipboard(form.style, 'style')} disabled={!form.style.trim()}>
-                    <Copy className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline">Copiar Estilos</span>
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => copyToClipboard(form.lyrics, 'lyrics')} disabled={!form.lyrics.trim()}>
-                    <Copy className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline">Copiar Letra</span>
-                  </Button>
-                </motion.div>
-              </div>
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex flex-wrap gap-3 pt-4 border-t border-neutral-800"
+              >
+                <Button variant="outline" size="sm" onClick={() => copyToClipboard(form.prompt, 'prompt')} disabled={!form.prompt.trim()}>
+                  <Copy className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Copiar Prompt</span>
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => copyToClipboard(form.positivePrompt, 'positivePrompt')} disabled={!form.positivePrompt.trim()}>
+                  <Copy className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Copiar Positivos</span>
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => copyToClipboard(form.style, 'style')} disabled={!form.style.trim()}>
+                  <Copy className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Copiar Estilos</span>
+                </Button>
+              </motion.div>
             </div>
           </div>
-        )}
+        </div>
       </div>
     </div>
   )

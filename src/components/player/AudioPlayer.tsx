@@ -1,9 +1,10 @@
 'use client'
 
-import { useRef, useState, useEffect, useCallback } from 'react'
-import { Play, Pause, Volume2, VolumeX, Repeat, Music, Shuffle } from 'lucide-react'
+import { useRef, useState, useEffect, useCallback, useMemo } from 'react'
+import { Play, Pause, Volume2, VolumeX, Repeat, Music, Shuffle, FileText } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { getPreferredAudioVersion } from '@/lib/playlist'
+import { getActiveLyricIndex, splitLyricsIntoLines } from '@/lib/lyrics'
 import { usePlaylistCurrentTrack, useActiveProject, usePlaylistCurrentIndex, usePlaylistRepeat, usePlaylistShuffle, useSetRepeat, useSetShuffle, useSetQueuedTrackAudioVersion } from '@/store/useAppStore'
 import { Waveform } from '@/components/player/Waveform'
 
@@ -35,6 +36,17 @@ export function AudioPlayer({ src, onEnded, className, onPlaylistPlay, isPlaying
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
   const [volume, setVolume] = useState(1)
+  const [showLyrics, setShowLyrics] = useState(false)
+  const lyricsViewportRef = useRef<HTMLDivElement>(null)
+  const lyricLines = useMemo(
+    () => splitLyricsIntoLines(trackInfo?.lyrics || ''),
+    [trackInfo?.lyrics]
+  )
+  const lyricSync = lyricLines.map((text, index) => {
+    const entry = trackInfo?.lyricSync?.[index]
+    return entry?.text === text ? entry : { text, startTime: null }
+  })
+  const activeLyricIndex = getActiveLyricIndex(lyricSync, currentTime)
 
   // Project accent color for play button styling
   const projectColor = activeProject?.accent || '#3b82f6'
@@ -47,6 +59,33 @@ export function AudioPlayer({ src, onEnded, className, onPlaylistPlay, isPlaying
   mountedRef.current = true
   
   srcRef.current = src
+
+  useEffect(() => {
+    if (activeLyricIndex < 0) return
+    const activeLine = lyricsViewportRef.current?.querySelector(`[data-lyric-index="${activeLyricIndex}"]`)
+    const behavior = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
+    activeLine?.scrollIntoView({ behavior, block: 'center' })
+  }, [activeLyricIndex, showLyrics])
+
+  useEffect(() => {
+    const handleSyncTimeRequest = (event: Event) => {
+      const { trackId, edge } = (event as CustomEvent<{
+        trackId: string
+        edge: 'start' | 'end'
+      }>).detail
+      if (!trackInfo || trackInfo.id !== trackId) return
+      window.dispatchEvent(new CustomEvent('arqchives:lyrics-sync-time', {
+        detail: {
+          trackId,
+          edge,
+          time: audioRef.current?.currentTime ?? 0,
+        },
+      }))
+    }
+
+    window.addEventListener('arqchives:request-lyrics-sync-time', handleSyncTimeRequest)
+    return () => window.removeEventListener('arqchives:request-lyrics-sync-time', handleSyncTimeRequest)
+  }, [trackInfo?.id])
 
   // Format time helper
   const formatTime = (seconds: number) => {
@@ -302,6 +341,79 @@ export function AudioPlayer({ src, onEnded, className, onPlaylistPlay, isPlaying
     <div className={cn("bg-base border-t border-subtle", className)}>
       <audio ref={audioRef} preload="metadata" />
 
+      {showLyrics && (
+        <section
+          className="relative isolate overflow-hidden border-b border-subtle bg-neutral-900/80 px-lg py-md"
+          aria-label="Letra sincronizada"
+        >
+          <header className="mb-3 flex items-center justify-center gap-4">
+            <div className="flex min-w-0 items-center gap-3">
+              <div
+                className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-white/5 text-neutral-300"
+              >
+                <Music className="h-4 w-4" />
+              </div>
+              <div className="min-w-0 text-center">
+                <p className="text-[11px] font-medium text-neutral-400">Letra sincronizada</p>
+                <p className="truncate text-sm font-semibold text-neutral-100">
+                  {trackInfo?.title || 'Nenhuma faixa selecionada'}
+                </p>
+              </div>
+            </div>
+            {lyricLines.length > 0 && (
+              <span className="flex-shrink-0 rounded-full border border-white/10 bg-black/20 px-2.5 py-1 font-mono text-[10px] text-neutral-400">
+                {activeLyricIndex >= 0 ? `${activeLyricIndex + 1} / ${lyricLines.length}` : `— / ${lyricLines.length}`}
+              </span>
+            )}
+          </header>
+          {lyricLines.length > 0 ? (
+            <>
+              <div ref={lyricsViewportRef} className="max-h-60 space-y-1 overflow-y-auto px-2">
+                {lyricLines.map((line, index) => {
+                  const isActive = index === activeLyricIndex
+                  const distance = activeLyricIndex < 0 ? Number.POSITIVE_INFINITY : Math.abs(index - activeLyricIndex)
+                  return (
+                    <div
+                      key={`${index}-${line}`}
+                      data-lyric-index={index}
+                      className={cn(
+                        "rounded-md px-3 py-1.5 text-center transition-[color,background,opacity] duration-300",
+                        isActive
+                          ? "bg-white/[0.07] text-primary"
+                          : distance === 1
+                            ? "text-secondary"
+                            : "text-muted"
+                      )}
+                      style={{
+                        opacity: isActive ? 1 : distance === 1 ? 0.78 : 0.42,
+                        boxShadow: isActive ? `inset 2px 0 ${projectColor}` : undefined,
+                      }}
+                      aria-current={isActive ? 'true' : undefined}
+                    >
+                      <span className={cn(
+                        "leading-relaxed transition-[font-size,font-weight] duration-300",
+                        isActive
+                          ? "text-lg font-semibold tracking-tight sm:text-xl"
+                          : distance === 1
+                            ? "text-base font-medium"
+                            : "text-sm"
+                      )}>
+                        {line}
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+              {activeLyricIndex < 0 && (
+                <p className="mt-2 text-center text-xs text-muted">Sincronize as linhas na aba Letra para acompanhar a música.</p>
+              )}
+            </>
+          ) : (
+            <p className="py-3 text-center text-sm text-muted">Adicione a letra na aba Letra da track.</p>
+          )}
+        </section>
+      )}
+
       {/* Top row: Track info + Controls + Volume */}
       <div className="flex items-center justify-between gap-md px-lg py-sm relative">
         {/* Track info - Left */}
@@ -339,6 +451,19 @@ export function AudioPlayer({ src, onEnded, className, onPlaylistPlay, isPlaying
                         ))}
                       </select>
                     )}
+                    <button
+                      type="button"
+                      onClick={() => setShowLyrics(value => !value)}
+                      aria-label={showLyrics ? 'Ocultar letra sincronizada' : 'Mostrar letra sincronizada'}
+                      aria-expanded={showLyrics}
+                      title={showLyrics ? 'Ocultar letra' : 'Mostrar letra sincronizada'}
+                      className={cn(
+                        "w-6 h-6 flex-shrink-0 flex items-center justify-center rounded trans-colors focus-ring",
+                        showLyrics ? "text-primary bg-hover" : "text-muted hover:text-primary hover:bg-hover"
+                      )}
+                    >
+                      <FileText className="w-3.5 h-3.5" />
+                    </button>
                   </div>
                 )}
               </div>

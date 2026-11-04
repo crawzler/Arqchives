@@ -36,6 +36,7 @@ export default function AppToolbar() {
   // Keyboard shortcuts - use getState() for current values to avoid stale closures
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.defaultPrevented) return
       // Don't trigger if user is typing in an input
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement) {
         return
@@ -58,6 +59,7 @@ export default function AppToolbar() {
       }
       // Space to play/pause when not in input
       if (e.code === 'Space' && !e.altKey && !e.ctrlKey && !e.metaKey) {
+        if (document.documentElement.dataset.lyricsSyncing === 'true') return
         if (!(e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement)) {
           e.preventDefault()
           const currentIsPlaying = useAppStore.getState().isPlaying

@@ -51,6 +51,12 @@ export interface SocialMetaItem {
   credits: string
 }
 
+export interface LyricSyncEntry {
+  text: string
+  startTime: number | null
+  endTime?: number | null
+}
+
 export interface Track {
   id: string
   number: string
@@ -63,6 +69,7 @@ export interface Track {
   versionMode: 'single' | 'dual' // 'single' = apenas versão final, 'dual' = pré-mix + master
   // AI Fields
   lyrics: string
+  lyricSync?: LyricSyncEntry[]
   prompt: string
   positivePrompt: string
   style: string

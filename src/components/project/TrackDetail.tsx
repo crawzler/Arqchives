@@ -13,6 +13,7 @@ import { TrackFilesTab } from '@/components/project/TrackFilesTab'
 import { TrackSocialTab } from '@/components/project/TrackSocialTab'
 import { TrackTabs } from '@/components/project/TrackTabs'
 import { TrackAIInfoTab } from '@/components/project/TrackAIInfoTab'
+import { TrackLyricsTab } from '@/components/project/TrackLyricsTab'
 import { Button } from '@/components/ui/Button'
 
 import { Project } from '@/types'
@@ -32,7 +33,7 @@ export default function TrackDetail({ trackId, albumId, project, onBack, trackVi
   const { getLocalUrl, deleteFile, ensureFolder, moveOrCopyFile } = useFileOperations()
   const { organizeFile, generateAlbumPaths } = useAlbumOperations()
 
-  const [activeTab, setActiveTab] = useState<'player' | 'files' | 'social' | 'info'>('player')
+  const [activeTab, setActiveTab] = useState<'player' | 'files' | 'social' | 'info' | 'lyrics'>('player')
   const [showEditModal, setShowEditModal] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [coverSrc, setCoverSrc] = useState<string | null>(null)
@@ -201,6 +202,17 @@ export default function TrackDetail({ trackId, albumId, project, onBack, trackVi
               <TrackAIInfoTab
                 track={track}
                 projectColor={project.accent}
+                onSave={(changes) => updateTrack(project.id, album.id, track.id, changes)}
+              />
+            )}
+
+            {activeTab === 'lyrics' && (
+              <TrackLyricsTab
+                track={track}
+                album={album}
+                project={project}
+                projectColor={project.accent}
+                audioPath={audioUrl}
                 onSave={(changes) => updateTrack(project.id, album.id, track.id, changes)}
               />
             )}

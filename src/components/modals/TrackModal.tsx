@@ -27,8 +27,6 @@ export function TrackModal({ track, projectColor, onSave, onClose }: TrackModalP
     key: track?.key || '',
     notes: track?.notes || '',
     versionMode: track?.versionMode || 'single',
-    // AI Fields
-    lyrics: track?.lyrics || '',
     prompt: track?.prompt || '',
     positivePrompt: track?.positivePrompt || '',
     style: track?.style || '',
@@ -53,7 +51,6 @@ export function TrackModal({ track, projectColor, onSave, onClose }: TrackModalP
         key: track.key || '',
         notes: track.notes || '',
         versionMode: track.versionMode || 'single',
-        lyrics: track.lyrics || '',
         prompt: track.prompt || '',
         positivePrompt: track.positivePrompt || '',
         style: track.style || '',
@@ -299,19 +296,6 @@ export function TrackModal({ track, projectColor, onSave, onClose }: TrackModalP
               <p className="text-caption text-muted mb-sm">Centralize aqui todos os dados de geração por IA. Útil para replicar, versionar ou documentar o processo criativo.</p>
 
               <div className="gap-lg">
-                {/* Lyrics */}
-                <div>
-                  <label className="text-caption font-medium text-secondary flex items-center gap-xs block mb-xs"><FileText className="w-3.5 h-3.5" /> Letra da Música</label>
-                  <textarea
-                    value={form.lyrics}
-                    onChange={e => setForm({ ...form, lyrics: e.target.value })}
-                    placeholder="Cole a letra completa aqui..."
-                    rows={8}
-                    className="w-full bg-hover border border-default radius-xl px-md py-sm text-body-sm text-primary placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-white/20 resize-y font-mono text-xs leading-relaxed"
-                    style={{ fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace' }}
-                  />
-                </div>
-
                 {/* Prompt */}
                 <div>
                   <label className="text-caption font-medium text-secondary flex items-center gap-xs block mb-xs"><Sparkles className="w-3.5 h-3.5" /> Prompt Utilizado</label>

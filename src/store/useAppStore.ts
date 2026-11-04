@@ -97,6 +97,7 @@ function createDefaultTrack(data: Partial<Track> = {}): Track {
     audioVersions: data.audioVersions || [],
     versionMode: data.versionMode || 'single',
     lyrics: data.lyrics || '',
+    lyricSync: data.lyricSync || [],
     prompt: data.prompt || '',
     style: data.style || '',
     social: {
@@ -275,16 +276,40 @@ export const useAppStore = create<AppState>()(
         return newTrack
       },
       updateTrack: (projectId: string, albumId: string, trackId: string, changes: Partial<Track>) =>
-        set((state) => ({
-          albums: {
+        set((state) => {
+          let updatedTrack: Track | undefined
+          const albums = {
             ...state.albums,
             [projectId]: (state.albums[projectId] || []).map((a) =>
               a.id === albumId
-                ? { ...a, tracks: a.tracks.map((t) => (t.id === trackId ? { ...t, ...changes } : t)) }
+                ? {
+                    ...a,
+                    tracks: a.tracks.map((track) => {
+                      if (track.id !== trackId) return track
+                      const lyricSync = changes.lyricSync !== undefined
+                        ? changes.lyricSync
+                        : changes.lyrics !== undefined && changes.lyrics !== track.lyrics
+                          ? []
+                          : track.lyricSync
+                      updatedTrack = { ...track, ...changes, lyricSync }
+                      return updatedTrack
+                    }),
+                  }
                 : a
             ),
-          },
-        })),
+          }
+
+          if (!updatedTrack) return { albums }
+          const synchronizedTrack = updatedTrack
+          return {
+            albums,
+            queue: state.queue.map((item) =>
+              item.track.id === trackId && item.album.id === albumId
+                ? { ...item, track: synchronizedTrack }
+                : item
+            ),
+          }
+        }),
       deleteTrack: (projectId: string, albumId: string, trackId: string) =>
         set((state) => ({
           albums: {
